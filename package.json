@@ -2,9 +2,10 @@
   "name": "kuroscan",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "nodemon": "nodemon server.ts"
   },
   "keywords": [],
   "author": "",
@@ -12,22 +13,30 @@
   "type": "commonjs",
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/node": "^25.0.9",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@grammyjs/parse-mode": "^2.2.0",
     "@solana-program/compute-budget": "^0.11.0",
     "@solana-program/memo": "^0.10.0",
     "@solana-program/system": "^0.10.0",
     "@solana-program/token": "^0.9.0",
     "@solana/kit": "^5.4.0",
+    "@solana/web3.js": "^1.98.4",
+    "@supabase/supabase-js": "^2.90.1",
     "amqplib": "^0.10.9",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
+    "bs58": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "grammy": "^1.39.3",
     "jsonwebtoken": "^9.0.3",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "socket.io": "^4.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
