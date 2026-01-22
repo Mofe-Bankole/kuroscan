@@ -2,10 +2,11 @@
   "name": "kuroscan",
   "version": "1.0.0",
   "description": "",
-  "main": "server.ts",
+  "main": "src/server.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "nodemon": "nodemon server.ts"
+    "nodemon": "nodemon src/server.ts",
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",
