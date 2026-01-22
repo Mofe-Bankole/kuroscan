@@ -1,0 +1,21 @@
+import 'dotenv/config'
+
+const PORT = process.env.PORT;
+
+const HELIUS_DEVNET_RPC= process.env.HELIUS_DEVNET_RPC as string;
+
+const BOT_TOKEN = process.env.BOT_TOKEN as string;
+
+const SOLANA_DEVNET_RPC = process.env.SOLANA_DEVNET_RPC;
+
+const KORA_DEVNET_API = process.env.KORA_DEVNET_API;
+
+const NODE_PUBLIC_SUPABASE_URL = process.env.NODE_PUBLIC_SUPABASE_URL as string;
+
+const NODE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY = process.env.NODE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY as string;
+
+const SPONSOR_PUBKEY = process.env.SPONSOR_PUBLIC_KEY as string
+const config = { PORT, SPONSOR_PUBKEY ,SOLANA_DEVNET_RPC, HELIUS_DEVNET_RPC, BOT_TOKEN, KORA_DEVNET_API, NODE_PUBLIC_SUPABASE_URL, NODE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY}
+
+export default config;
+
