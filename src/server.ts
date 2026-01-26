@@ -1,6 +1,6 @@
 import express from "express";
-import config from "./config/config";
 import "./bot/telegram"
+import config from "./config/config.js";
 // import { initSponsor } from "./scripts/scanSponsoredAccounts";
 import { getBalance  } from "./utils/solana";
 import { supabase } from "./lib/supabase";
