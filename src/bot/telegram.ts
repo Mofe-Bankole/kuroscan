@@ -1,4 +1,4 @@
-import { Bot } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 import config from "../config/config";
 import { getAccountInfo } from "../utils/solana";
 import { addNewAccount } from "../cron/trackAccount";
@@ -10,11 +10,29 @@ import { reclaimSystemAccount } from "../services/reclaimService";
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
 
-kuro.command("test", async (ctx) => {
-    console.log('Test command was called')
-    await ctx.reply("I'm a bot dedicated to helping you reclaim SOL from your expired SOL accounts. I also monitor the Solana Network for all your accounts.");
-    await ctx.reply("I know we'll do great things together.");
+
+kuro.command("start", async (ctx) => {
+    const messageText = ctx.message?.text || "";
+    const parts = messageText.split(" ");
+    const account_pubkey = parts[1];
+
+    if (!account_pubkey) {
+        await ctx.reply(`❌ Please provide a sponsor publick key\n\n` + `ℹ️ Usage /start <account_public_key>`);
+        return
+    }
+
+    await ctx.reply(`The account pubkey provided above will be set as your new acount\n\n` + `Please do not forget this publick key`)
+    const inlineKeyboard = new InlineKeyboard()
+        .text("Yes", "yes_btn").text("No","no-btn");
+    await ctx.reply("Set this account as your new sponsor?", {
+        reply_markup: inlineKeyboard
+    });
+
 });
+
+kuro.callbackQuery("yes_btn" ,async ctx => {
+    await ctx.reply("This is your new sponsor")
+})
 
 kuro.command("about", async (ctx) => {
     await ctx.reply("Hey I'm Tokito 👋 a bot dedicated to scanning the Kora node for dormant SOL 💰accounts\n\nMy name's based on the Mist Hashira  Muichiro Tokito since I'm pretty fast and reliable 🙂\n\nChat me up to get started")
