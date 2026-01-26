@@ -1,5 +1,3 @@
-import { Lamports } from "@solana/kit";
-
 export type Account = {
     address : string;
     owner_program : string;
@@ -18,27 +16,49 @@ export type AccountInfo = {
     isSystemAccount : boolean;
     isTokenAccount : boolean;
     exists : boolean;
-    lamports : Lamports |  null;
+    data : number | null;
+    lamports : bigint;
+    rentExempt : number | null;
 }
 
 // export interface ReclaimableAccount{
 // }
 
-export interface ReclaimableAccount {
-    publicKey: string;
-    reclaimable: boolean;
-    status: "active" | "closed";
-    reason: string;
-    lamports: bigint | null;
-    rentExemptMinimum: bigint | null;
-    reclaimableLamports?: bigint;
-  }
+export interface ReClaimableAccount {
+    publicKey: string;        // THe acconts publickey
+    reclaimable: boolean;     // States if its reclaimable
+    status: "active" | "closed";  // Stus of the account
+    reason: string;              // Reason for being reclaimable (Dev-frinedly)
+    lamports: bigint | null;    // Lamports owned by this account
+    rentExemptMinimum: bigint | null;   // Accounts rent -exempt minimum
+    reclaimableLamports: bigint;       // NUmber of reclaimable lamports
+    isSystemAccount : boolean;
+}
   
 
 export interface ReClaimedSolTransaction{
-    success : boolean;
-    signature : string;
-    explorerURL : string;
-    amount : number
-    error : any
+    success : boolean;    // Success of the transaction
+    signature : string;  // The accounts signaturr
+    explorerURL : string;      // Solscan explorere URL 
+    amount : number            // Amount of sol transfarred
+    error : any                // Possble errors
+}
+
+export interface ReClaimableAmountInfo {
+    balance: number;           // Total balance in SOL
+    balanceLamports: bigint;     // Total balance in lamports
+    rentExemptMinimum: bigint | null;   // Rent-exempt minimum in lamports
+    rentExemptMinimumSOL: number; // Rent-exempt minimum in SOL
+    reclaimableAmount: bigint;   // Reclaimable amount in SOL
+    reclaimableLamports: bigint; // Reclaimable amount in lamports
+}
+
+export interface CreatedAccount {
+    success: boolean;
+    accountPubkey: string;
+    signature: string;
+    explorerURL: string;
+    accountType: "system" | "token";
+    initialBalance: number;
+    error?: string;
 }

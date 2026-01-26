@@ -1,14 +1,14 @@
-import { Bot } from "grammy"
-import { bold, fmt, italic, link } from "@grammyjs/parse-mode"
-import config from "../config/config"
-import { getAccountInfo, getBalance, getReclaimableAccount } from "../utils/solana";
-import { supabase } from "../lib/supabase";
+import { Bot } from "grammy";
+import config from "../config/config";
+import { getAccountInfo } from "../utils/solana";
 import { addNewAccount } from "../cron/trackAccount";
-import { publicKey} from "../sponsorkeypair.json"
-import { getSponsoredAccounts, SponsoredAccount } from "../services/getSponsoredAccounts";
+import { publicKey } from "../sponsorkeypair.json";
+import { getSponsoredAccounts } from "../services/getSponsoredAccounts";
+import { getReclaimableAccount } from "../services/getReclaimables";
+import { createSystemAccount } from "../services/createAccount";
+import { reclaimSystemAccount } from "../services/reclaimService";
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
-
 
 kuro.command("test", async (ctx) => {
     console.log('Test command was called')
@@ -23,7 +23,12 @@ kuro.command("about", async (ctx) => {
 kuro.command("help", async (ctx) => {
     ctx.reply("Here are all my available commands 💨");
     ctx.reply("/test - Test Kuro\n/about - Tells you about Tokito\n/uptime - Check the uptime of Tokito\n/track - Track a Sponsor\n")
-    ctx.reply("You can use them by adding a '/' before the command")
+    ctx.reply("You can use them by adding a '/' before the command");
+    // await kuro.api.sendMessage(
+    //     ctx.chat.id,
+    //     '<b>Hi!</b> <i>Welcome</i> to <a href="https://grammy.dev">grammY</a>.',
+    //     { parse_mode: "HTML" },
+    // );
 })
 
 kuro.command("add", async (ctx) => {
@@ -44,46 +49,37 @@ kuro.command("add", async (ctx) => {
         return;
     }
 
-    const res = addNewAccount({ address: accountPubkey, sponsor_pubkey: config.SPONSOR_PUBKEY, owner_program: process.env.DEFAULT_OWNER_PROGRAM as string, status: "active" })
-    await ctx.reply(`Tracking account: ${accountPubkey}.........`);
-    
-});
-
-// Fixed fetch command
-kuro.command("fetch", async (ctx) => {
-    const messageText = ctx.message?.text || "";
-    const parts = messageText.split(" ");
-    const accountPubkey = parts[1];
-
-    if (!accountPubkey) {
-        await ctx.reply("Please provide the account public key 😑. Usage:\n/fetch <account_public_key>");
-        return;
-    }
-
-    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(accountPubkey)) {
-        await ctx.reply("That doesn't look like a valid Solana public key 😑. Please check and try again. 😝");
-        return;
-    }
-
     try {
-        const data = await getBalance(accountPubkey);
-        const explorerUrl = `https://solscan.io/account/${accountPubkey}?cluster=devnet`
-        await ctx.reply(`Balance is ${data} SOL 💰\nSolscan Page ${explorerUrl}`);
-    } catch (error) {
-        await ctx.reply("Sorry, I couldn't fetch the balance 😅.\nPlease try again later.");
+        const res = await addNewAccount({ address: accountPubkey, sponsor_pubkey: config.SPONSOR_PUBKEY, owner_program: process.env.DEFAULT_OWNER_PROGRAM as string, status: "active" });
+        if (res) {
+            await ctx.reply(`✅ Successfully tracking account: ${accountPubkey}`);
+        } else {
+            await ctx.reply(`❌ Failed to track account. It may already exist in the database.`);
+        }
+    } catch (error: any) {
+        await ctx.reply(`❌ Error tracking account: ${error.message}`);
     }
+
 });
 
 
 kuro.command("stats", async (ctx) => {
     const now = Intl.DateTimeFormat('en-NG', { dateStyle: "medium", timeStyle: "medium" }).format(new Date());
     const accountInfo = await getAccountInfo(publicKey);
-    ctx.reply(`💰 Balance ${accountInfo.balance} SOL\n\n👌🏾 Status : ${accountInfo.status}\n\nisSponsor : true\n\n🌐 Explorer URL : ${accountInfo.explorer}\n\nSpace : ${accountInfo.space}`)
-    kuro.api.sendMessage(ctx.message?.chat.id || "", `*Stats*\n\n⏲ Time : ${now}`, { parse_mode: "MarkdownV2" })
+
+    ctx.reply(`
+        💰 Balance ${accountInfo.balance} SOL\n\n` 
+        + `ℹ️ Status : ${accountInfo.status}\n\n` 
+        + `isSponsor : true\n\n` 
+        + `🌐 Explorer URL : ${accountInfo.explorer}\n\n
+        `)
 })
 
 
-kuro.command("list" , async(ctx) => {
+
+// List command 
+kuro.command("list", async (ctx) => {
+    await ctx.reply(`Fetching all sponsored accounts............⏳`)
     const data = await getSponsoredAccounts();
 
     if (typeof data === "string") {
@@ -92,7 +88,7 @@ kuro.command("list" , async(ctx) => {
     } else if (Array.isArray(data) && data.length > 0) {
         let listString = `*🏦 Sponsored Accounts 🏦*\n\n` +
             data.map(
-                (acc: {sponsor_pubkey: string, account_pubkey: string}, i: number) =>
+                (acc: { sponsor_pubkey: string, account_pubkey: string }, i: number) =>
                     `${i + 1}.Account: \`${acc.account_pubkey}\` Sponsor: \`${acc.sponsor_pubkey}\`\n`
             ).join("\n\n");
 
@@ -100,34 +96,141 @@ kuro.command("list" , async(ctx) => {
     } else {
         await ctx.reply("No sponsored accounts found.");
     }
-    
+
 })
 
-kuro.command("scan", async (ctx) => {
+kuro.command("fetch", async (ctx) => {
     const messageText = ctx.message?.text || "";
     const parts = messageText.split(" ");
     const accountPubkey = parts[1];
 
     try {
-        const data = getAccountInfo(accountPubkey)
-        const res = await data;
-        await ctx.reply(`Account : ${res.publicKey}\nBalance : ${res.balance?.toFixed(4)}\nExecutable : ${res.executable}\nExplorer URL : ${res.explorer}\nOwner: ${res.owner}\nSystem Account : ${res.isSystemAccount}\nToken Account : ${res.isTokenAccount}\nLamports : ${res.lamports}`)
-    } catch (error) {
-        console.log(error)
-        await ctx.reply(`${error}`)
+        const res = await getAccountInfo(accountPubkey);
+
+        if (!res || !res.exists) {
+            await ctx.reply("Account Not Found ❌\n\nPlease retry with a confirmed public key");
+            return;
+        }
+
+        await kuro.api.sendMessage(ctx.chat.id, `
+        <b>Account Info</b>
+        <i>Balance : ${res.balance?.toFixed(4) || 0} SOL</i>
+        <b>Executable : ${res.executable} </b>
+        <a href="${res.explorer || '#'}" target="_blank">Explorer URL</a>
+        <b>Owner : ${res.owner || 'Unknown'} </b>
+        <b>System Account : ${res.isSystemAccount}</b>
+        <b>Token Account : ${res.isTokenAccount}</b>
+        <b>Lamports : ${res.lamports?.toString() || '0'}</b>
+        <b>Status : ${res.status}</b>`, { parse_mode: "HTML" });
+    } catch (error: any) {
+        console.log(error);
+        await ctx.reply(`❌ Error: ${error.message || String(error)}`);
     }
 })
 
-kuro.command("verify" , async ctx => {
+kuro.command("verify", async ctx => {
     const messageText = ctx.message?.text || "";
     const parts = messageText.split(" ");
     const accountPubkey = parts[1];
 
+    if (!accountPubkey) {
+        await ctx.reply("Please provide an account public key. Usage:\n/verify <account_public_key>");
+        return;
+    }
+
     try {
         const res = await getReclaimableAccount(accountPubkey);
-        ctx.reply(`Recliamable : ${res.reclaimable ? "Yes" : "No"}  ${res.reclaimableLamports} | ${res.reason}  | ${res.rentExemptMinimum} ${res.lamports}`)
-    } catch (error) {
-        console.error(error)
+        if (!res) {
+            await ctx.reply("Error Verifying Account. Please Try Again");
+            return;
+        }
+
+        const reclaimableAmount = res.reclaimableLamports
+            ? (Number(res.reclaimableLamports) / 1000000000).toFixed(6)
+            : "0";
+
+        await ctx.reply(
+            `🔍 Account Verification\n\n` +
+            `📍 Account: \`${accountPubkey}\`\n\n` +
+            `Reclaimable: ${res.reclaimable ? "✅ Yes" : "❌ No"}\n` +
+            `Status: ${res.status}\n` +
+            `Reason: ${res.reason}\n` +
+            `Reclaimable Amount: ${reclaimableAmount} SOL\n` +
+            `Lamports: ${res.lamports?.toString() || "0"}\n` +
+            `System Account: ${res.isSystemAccount ? "Yes" : "No"}`
+        );
+        await ctx.reply(`ℹ️ To reclaim this account\n\n` + 
+            `Use the reclaim command : /reclaim <account_public_key>\n`
+        )
+    } catch (error: any) {
+        console.error(error);
+        await ctx.reply(`❌ Error: ${error.message || String(error)}`);
+    }
+})
+
+kuro.command("reclaim", async (ctx) => {
+    const messageText = ctx.message?.text || "";
+    const parts = messageText.split(" ");
+    const accountPubkey = parts[1];
+
+    if (!accountPubkey) {
+        await ctx.reply("Please provide an account public key.\n\nUsage:\n/reclaim <account_public_key>");
+        return;
+    }
+
+    try {
+        await ctx.reply("Attempting to reclaim rent....... ⏳");
+
+        const result = await reclaimSystemAccount(accountPubkey);
+
+        if (result.success) {
+            await ctx.reply(
+                `✅ Reclaim Successful!\n\n` +
+                `💰 Reclaimed: ${result.amount.toFixed(6)} SOL\n` +
+                `🔗 Transaction: ${result.explorerURL}\n\n` +
+                `The reclaimed SOL has been sent to the operator treasury.`
+            );
+        } else {
+            await ctx.reply(
+                `❌ Reclaim Failed\n\n` +
+                `Reason: ${result.error}\n\n` +
+                `🔗 Account: ${result.explorerURL}\n\n` +
+                `💡 Note: To reclaim rent, you need to own the account or be the close authority.\n\n` +
+                `Use /create to make test accounts you can reclaim.\n`
+            );
+        }
+    } catch (error: any) {
+        console.error(error);
+        await ctx.reply(`❌  Error: ${error.message || String(error)}`);
+    }
+})
+
+
+
+kuro.command("create", async ctx => {
+    try {
+        await ctx.reply("Creating a new system account... ⏳");
+
+        const newAccount = await createSystemAccount();
+
+        if (!newAccount || !newAccount.success) {
+            await ctx.reply(`❌ Failed to create account: ${newAccount?.error || "Unknown error"}`);
+            return;
+        }
+
+        await ctx.reply(
+            `✅ Account Created Successfully!\n\n` +
+            `📍 Account Address : ${newAccount.accountPubkey}\n\n` +
+            `⛓️ Explorer: ${newAccount.explorerURL}\n\n` +
+            `💰 Initial Balance: ${newAccount.initialBalance} SOL\n\n` +
+            `This account is now tracked. You can reclaim rent from it later using:\n` +
+            `/reclaim ${newAccount.accountPubkey}`
+        );
+
+        await ctx.reply(`ℹ️ You can get all the accounts you have added earlier using /list`)
+    } catch (error: any) {
+        console.error(error);
+        await ctx.reply(`❌ Error: ${error.message || String(error)}`);
     }
 })
 
@@ -135,23 +238,23 @@ kuro.hears("Whats up?", ctx => {
     ctx.reply("Im doing well brother , just fighting some demons over here 😈")
 })
 
-kuro.hears("How are you?"   , ctx =>{
+kuro.hears("How are you?", ctx => {
     ctx.reply("Im doing fine wbu?")
 })
 
-kuro.hears("How are u?" , ctx =>{
+kuro.hears("How are u?", ctx => {
     ctx.reply("Im doing fine wbu?")
 })
 
-kuro.hears("How are you" , ctx =>{
+kuro.hears("How are you", ctx => {
     ctx.reply("Im doing fine wbu?")
 })
 
-kuro.hears("How r u?" , ctx =>{
+kuro.hears("How r u?", ctx => {
     ctx.reply("Im doing fine wbu?")
 })
 
-kuro.hears("How are u" , ctx =>{
+kuro.hears("How are u", ctx => {
     ctx.reply("Im doing fine wbu?")
 })
 
