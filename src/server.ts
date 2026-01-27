@@ -36,7 +36,7 @@ app.get("/api/v1/scan" , async(req , res) => {
     
 })
 
-app.listen(4070, async () => {
+app.listen(process.env.PORT || 4070, async () => {
     console.log(`Bot Running on PORT ${config.PORT}`);
     console.log(`Telegram : https://t.me/@kuroscan_bot`);
 })
