@@ -1,6 +1,6 @@
 import express from "express";
 import "./bot/telegram"
-import config from "./config/config.js";
+import config from "./config/config";
 // import { initSponsor } from "./scripts/scanSponsoredAccounts";
 import { getBalance  } from "./utils/solana";
 import { supabase } from "./lib/supabase";
@@ -17,6 +17,7 @@ const now = Intl.DateTimeFormat('en-NG' , {dateStyle : "medium" , timeStyle : "m
 app.get("/api/v1/health", async (req, res) => {
     res.status(200).json({ message: "Kuroscan API", health: "OK", telegram : "Telegram : https://t.me/@kuroscan_bot"});
 }) 
+
 // getRentExemptMinimum(50)
 // getReclaimableAmount("FbS9vrQXMss89UGXXpyavV3VRF6ZbgSUXfdmUY4jWn36")
 

@@ -7,6 +7,7 @@ import { getSponsoredAccounts } from "../services/getSponsoredAccounts";
 import { getReclaimableAccount } from "../services/getReclaimables";
 import { createSystemAccount } from "../services/createAccount";
 import { reclaimSystemAccount } from "../services/reclaimService";
+import { storeUser } from "../utils/db";
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
 
@@ -15,13 +16,16 @@ kuro.command("start", async (ctx) => {
     const messageText = ctx.message?.text || "";
     const parts = messageText.split(" ");
     const account_pubkey = parts[1];
-
+    // console.log(ctx.message?.from.id)
+    const save = await storeUser(ctx.message?.from.id as number);
+    if(!save) { console.error("Unable to save user")}
+    
     if (!account_pubkey) {
         await ctx.reply(`❌ Please provide a sponsor publick key\n\n` + `ℹ️ Usage /start <account_public_key>`);
         return
     }
 
-    await ctx.reply(`The account pubkey provided above will be set as your new acount\n\n` + `Please do not forget this publick key`)
+    await ctx.reply(`The account pubkey provided above will be set as your new acount\n\n` + `Please do not forget this publick key`);
     const inlineKeyboard = new InlineKeyboard()
         .text("Yes", "yes_btn").text("No","no-btn");
     await ctx.reply("Set this account as your new sponsor?", {
@@ -29,6 +33,7 @@ kuro.command("start", async (ctx) => {
     });
 
 });
+
 
 kuro.callbackQuery("yes_btn" ,async ctx => {
     await ctx.reply("This is your new sponsor")
@@ -39,14 +44,16 @@ kuro.command("about", async (ctx) => {
 })
 
 kuro.command("help", async (ctx) => {
-    ctx.reply("Here are all my available commands 💨");
-    ctx.reply("/test - Test Kuro\n/about - Tells you about Tokito\n/uptime - Check the uptime of Tokito\n/track - Track a Sponsor\n")
-    ctx.reply("You can use them by adding a '/' before the command");
-    // await kuro.api.sendMessage(
-    //     ctx.chat.id,
-    //     '<b>Hi!</b> <i>Welcome</i> to <a href="https://grammy.dev">grammY</a>.',
-    //     { parse_mode: "HTML" },
-    // );
+   await  ctx.reply("Here are all my available commands 💨");
+    await ctx.reply(
+        `/about - Tells you about Tokito\n` 
+        + `/add - Add a new sponsored account to track\n` 
+        + `/stats - Status of your sponsor / Kora Node\n`
+        +  `/list - List all sponsored accounts\n`
+        + `/verify - Verify if an account is reclaimable\n`
+        + `/create - Create a new sponsored account / System Program account\n`
+        + `/fetch - Fetch an accounts info\n` 
+    )
 })
 
 kuro.command("add", async (ctx) => {
@@ -54,8 +61,6 @@ kuro.command("add", async (ctx) => {
     const messageText = ctx.message?.text || "";
     const parts = messageText.split(" ");
     const accountPubkey = parts[1];
-
-    console.log(ctx.message?.text)
 
     if (!accountPubkey) {
         await ctx.reply("Please provide the account public key 😑. Usage:\n/track <account_public_key>");
@@ -82,9 +87,9 @@ kuro.command("add", async (ctx) => {
 
 
 kuro.command("stats", async (ctx) => {
-    const now = Intl.DateTimeFormat('en-NG', { dateStyle: "medium", timeStyle: "medium" }).format(new Date());
     const accountInfo = await getAccountInfo(publicKey);
-
+    await ctx.react("👌")
+    await ctx.reply("Fetching Sponsor stats.......")
     ctx.reply(`
         💰 Balance ${accountInfo.balance} SOL\n\n` 
         + `ℹ️ Status : ${accountInfo.status}\n\n` 
@@ -104,13 +109,10 @@ kuro.command("list", async (ctx) => {
         // This is the "No sponsored accounts found." message or other error string
         await ctx.reply(data);
     } else if (Array.isArray(data) && data.length > 0) {
-        let listString = `*🏦 Sponsored Accounts 🏦*\n\n` +
-            data.map(
-                (acc: { sponsor_pubkey: string, account_pubkey: string }, i: number) =>
-                    `${i + 1}.Account: \`${acc.account_pubkey}\` Sponsor: \`${acc.sponsor_pubkey}\`\n`
-            ).join("\n\n");
-
-        await ctx.reply(listString, { parse_mode: "Markdown" });
+        
+        data.forEach(acc => {
+            ctx.reply(`💳 Account : ${acc.account_pubkey}\n\n` + `💳 Sponsor : ${acc.sponsor_pubkey}`)
+        })
     } else {
         await ctx.reply("No sponsored accounts found.");
     }
@@ -197,7 +199,7 @@ kuro.command("reclaim", async (ctx) => {
     }
 
     try {
-        await ctx.reply("Attempting to reclaim rent....... ⏳");
+        await ctx.reply("Attempting to reclaim rent.......⏳");
 
         const result = await reclaimSystemAccount(accountPubkey);
 

@@ -3,6 +3,7 @@ import { getReclaimableAccount } from "./getReclaimables";
 import { PublicKey, SystemProgram, Keypair, Transaction, sendAndConfirmTransaction, Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { ReClaimedSolTransaction } from "../utils/types";
 import { OPERATOR_KEYPAIR, OPERATOR_PUBKEY } from "../utils/constants";
+import { fetchSponsoredAccount } from "../utils/db";
 
 const connection = new Connection(config.SOLANA_DEVNET_RPC as string, "confirmed");
 
@@ -79,7 +80,7 @@ export async function reclaimSystemAccount(accountPubkey: string): Promise<ReCla
 
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = OPERATOR_PUBKEY;
-
+        const account_secret_key = await fetchSponsoredAccount(fromPubkey)
         // Sign and send the transaction
         // NOTE: This will only work if you own the account (have its private key)
         // For accounts you don't own, this will fail
