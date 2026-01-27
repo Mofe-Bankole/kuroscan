@@ -80,7 +80,7 @@ export async function reclaimSystemAccount(accountPubkey: string): Promise<ReCla
 
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = OPERATOR_PUBKEY;
-        const account_secret_key = await fetchSponsoredAccount(fromPubkey)
+        const account_secret_key = await fetchSponsoredAccount(fromPubkey.toString())
         // Sign and send the transaction
         // NOTE: This will only work if you own the account (have its private key)
         // For accounts you don't own, this will fail

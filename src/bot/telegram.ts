@@ -3,11 +3,11 @@ import config from "../config/config";
 import { getAccountInfo } from "../utils/solana";
 import { addNewAccount } from "../cron/trackAccount";
 import { publicKey } from "../sponsorkeypair.json";
-import { getSponsoredAccounts } from "../services/getSponsoredAccounts";
+// import { getSponsoredAccounts } from "../services/getSponsoredAccounts";
 import { getReclaimableAccount } from "../services/getReclaimables";
 import { createSystemAccount } from "../services/createAccount";
 import { reclaimSystemAccount } from "../services/reclaimService";
-import { storeUser } from "../utils/db";
+import { getSponsoredAccounts, storeUser } from "../utils/db";
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
 
@@ -105,17 +105,13 @@ kuro.command("list", async (ctx) => {
     await ctx.reply(`Fetching all sponsored accounts............⏳`)
     const data = await getSponsoredAccounts();
 
-    if (typeof data === "string") {
-        // This is the "No sponsored accounts found." message or other error string
-        await ctx.reply(data);
-    } else if (Array.isArray(data) && data.length > 0) {
-        
-        data.forEach(acc => {
-            ctx.reply(`💳 Account : ${acc.account_pubkey}\n\n` + `💳 Sponsor : ${acc.sponsor_pubkey}`)
-        })
-    } else {
-        await ctx.reply("No sponsored accounts found.");
+    if(!data || data.length === 0){
+        await ctx.reply(`No accounts`)
     }
+    
+    data.forEach(acc => {
+        ctx.reply(`🔐 Account PublicKey : ${acc.public_key}\n` + `\nℹ️ Status : ${acc.status}\n\n` + `Explorer URL  : https://solscan.io/account/${acc.public_key}?cluster=devnet\n`)
+    })
 
 })
 
