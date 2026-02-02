@@ -1,3 +1,4 @@
+Kuroscan
 ___
 **Kuroscan** - The bot that offers fast reclaims over idle accounts
 
