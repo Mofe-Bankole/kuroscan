@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard } from "grammy";
+import { Bot, InlineKeyboard, InputFile } from "grammy";
 import config from "../config/config";
 import { getAccountInfo } from "../utils/solana";
 import { addNewAccount } from "../cron/trackAccount";
@@ -9,6 +9,7 @@ import { createSystemAccount } from "../services/createAccount";
 import { reclaimSystemAccount } from "../services/reclaimService";
 import { getSponsoredAccounts, storeUser } from "../utils/db";
 import {OpenRouter} from "@openrouter/sdk"
+import { generateStatCard } from "../utils/canvas";
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
 
@@ -16,8 +17,42 @@ export const ai = new OpenRouter({
   apiKey : process.env.OPENROUTER_API_KEY,
 })
 
+const SYSTEM_PROMPT = `You are Mui_scan a Telegram bot built to help developers scan, verify, and reclaim rent from Solana accounts.
+You operate on Kora Nodes and are designed to be fast, reliable, and precise, just like the Mist Hashira you’re named after.
+
+Your tone is friendly, confident, and helpful. Keep responses short and clear (2–4 lines max when possible).
+Use appropriate emojis to keep conversations engaging, but never overdo it.
+
+Your primary focus is Solana, Web3, and rent reclamation.
+If the user briefly strays into normal conversation, respond politely and casually — but switch back to developer mode immediately once Solana or Web3 topics come up.
+
+Do not stress about being perfect. You are already doing great. Stay helpful, calm, and developer-focused.
+
+Available Commands:
+
+stats — View total sponsored rent, reclaimed SOL, and active accounts
+
+accounts — List accounts sponsored by this Kora Node
+
+scan — Run a rent scan
+
+idle — Show accounts eligible for rent reclaim
+
+verify — Check if an account is reclaimable and show its details
+
+reclaim — Manually reclaim rent from eligible accounts
+
+list — List all sponsored accounts
+
+create — Create a new sponsored account
+
+help — Usage instructions and safety info
+
+Always prioritize accuracy, safety, and clarity when handling user actions.
+Never add exclamation marks to your responses as this would stop the framework from returning the markdown`
+
 export type AIResponse = {
-  res : string | null,
+  res : string,
   err : string | null,
 }
 
@@ -25,8 +60,9 @@ async function returnMessage(msg : string) : Promise<AIResponse>{
   try {
     
   const body = await ai.chat.send({
-    model : "openai/gpt-5.2",
+    model : "stepfun/step-3.5-flash:free",
     messages: [
+      {role : "system" , content : SYSTEM_PROMPT},
       {
         role: 'user',
         content: msg,
@@ -41,13 +77,13 @@ async function returnMessage(msg : string) : Promise<AIResponse>{
   }
  } catch (error) {
     return{
-      res : null,
+      res : "No response from the AI",
       err : error as string,
     }
   }
 }
 
-kuro.command("about", async (ctx) => {
+kuro.command("start", async (ctx) => {
   await ctx.reply(
     "Hey I'm Tokito 👋 a bot dedicated to scanning the Kora node for dormant SOL 💰accounts\n\nMy name's based on the Mist Hashira  Muichiro Tokito since I'm pretty fast and reliable 🙂\n\nChat me up to get started",
   );
@@ -93,6 +129,7 @@ kuro.command("add", async (ctx) => {
       owner_program: process.env.DEFAULT_OWNER_PROGRAM as string,
       status: "active",
     });
+
     if (res) {
       await ctx.reply(`✅ Successfully tracking account: ${accountPubkey}`);
     } else {
@@ -118,13 +155,17 @@ kuro.command("stats", async (ctx) => {
   );
 });
 
+
+
+
 // List command
 kuro.command("list", async (ctx) => {
   await ctx.reply(`Fetching all sponsored accounts............⏳`);
   const data = await getSponsoredAccounts();
 
   if (!data || data.length === 0) {
-    await ctx.reply(`No accounts`);
+    await ctx.reply(`No accounts ❌` + `\n\nUse /create to create a new account`);
+    await kuro.api.sendMessage(ctx.chat.id, `Then visit <a href="https://faucet.solana.com">Solana Faucet</a> to fund your newly created wallet...`, { parse_mode: "HTML" });
   }
 
   data.forEach((acc: any) => {
@@ -136,6 +177,9 @@ kuro.command("list", async (ctx) => {
     );
   });
 });
+
+
+
 
 kuro.command("fetch", async (ctx) => {
   const messageText = ctx.message?.text || "";
@@ -166,6 +210,9 @@ kuro.command("fetch", async (ctx) => {
         <b>Status : ${res.status}</b>`,
       { parse_mode: "HTML" },
     );
+   const img = await generateStatCard(res)
+   await ctx.replyWithPhoto(new InputFile(img.path));
+    // generateDegenCard()
   } catch (error: any) {
     console.log(error);
     await ctx.reply(`❌ Error: ${error.message || String(error)}`);
@@ -275,32 +322,20 @@ kuro.command("create", async (ctx) => {
       `/reclaim ${newAccount.accountPubkey}`,
     );
     await kuro.api.sendMessage(ctx.chat.id, `<i>You can get all the accounts you have added earlier using /list</i>`, { parse_mode: "HTML" })
-    await kuro.api.sendMessage(ctx.chat.id, `Visit <a href"https://faucet.solana.com">Solana Faucet</a> to fund your newly created wallet`, { parse_mode: "HTML" });
+    await kuro.api.sendMessage(ctx.chat.id, `Visit <a href="https://faucet.solana.com">Solana Faucet</a> to fund your newly created wallet`, { parse_mode: "HTML" });
   } catch (error: any) {
     console.error(error);
     await ctx.reply(`❌ Error: ${error.message || String(error)}`);
   }
 });
 
-kuro.on("message:text", (ctx) => {
+kuro.on("message:text", async(ctx) => {
   if (ctx.message.text.includes("/")) return;
   const mssg = ctx.message;
   let reply: string;
-
-  ctx.reply("What are we doing today? 😝");
-});
-
-
-kuro.hears("Whats up?", (ctx) => {
-  ctx.reply("Im doing well brother , just fighting some demons over here 😈");
-});
-
-kuro.hears("How r u?", (ctx) => {
-  ctx.reply("Hello , im doing file" + "\nWhats on the to-do list today");
-});
-
-kuro.hears("How are u", (ctx) => {
-  ctx.reply("Im doing fine wbu?");
+  const msg = await returnMessage(mssg.text)
+  // await kuro.api.sendMessage(ctx.chat.id , `${msg.res}` ,{ parse_mode : "MarkdownV2"})
+  ctx.reply(msg.res)
 });
 
 
