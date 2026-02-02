@@ -5,6 +5,7 @@ import config from "./config/config";
 import { getBalance  } from "./utils/solana";
 import { supabase } from "./lib/supabase";
 import { getReclaimableAmount } from "./services/getReclaimables";
+import { kuro } from "./bot/telegram";
 
 const app = express();
 
@@ -12,14 +13,11 @@ app.use(express.urlencoded())
 app.use(express.json())
 
 const now = Intl.DateTimeFormat('en-NG' , {dateStyle : "medium" , timeStyle : "medium"}).format(new Date())
-// getBalance("FbS9vrQXMss89UGXXpyavV3VRF6ZbgSUXfdmUY4jWn36")
 
 app.get("/api/v1/health", async (req, res) => {
     res.status(200).json({ message: "Kuroscan API", health: "OK", telegram : "Telegram : https://t.me/@kuroscan_bot"});
 }) 
 
-// getRentExemptMinimum(50)
-// getReclaimableAmount("FbS9vrQXMss89UGXXpyavV3VRF6ZbgSUXfdmUY4jWn36")
 
 app.get("/api/v1/sponsored" , async(req , res) => {
     const {data , error} = await supabase.from("sponsored_accounts").select("*")
@@ -37,6 +35,19 @@ app.get("/api/v1/scan" , async(req , res) => {
 })
 
 app.listen(process.env.PORT || 4070, async () => {
+    kuro.start()
     console.log(`Bot Running on PORT ${config.PORT}`);
     console.log(`Telegram : https://t.me/@kuroscan_bot`);
 })
+
+process.on('SIGINT', () => {
+    console.log('Shutting down gracefully...');
+    kuro.stop();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('Shutting down gracefully...');
+    kuro.stop();
+    process.exit(0);
+});

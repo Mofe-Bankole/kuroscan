@@ -339,4 +339,4 @@ kuro.on("message:text", async(ctx) => {
 });
 
 
-kuro.start();
+
