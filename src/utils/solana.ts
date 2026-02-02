@@ -1,7 +1,7 @@
 import { address, createSolanaRpc } from "@solana/kit";
 import config from "../config/config";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { AccountInfo, ReClaimableAccount, ReClaimableAmountInfo, ReClaimedSolTransaction } from "./types";
+import { AccountInfo } from "./types";
 import { SYSTEM_PROGRAM, TOKEN_PROGRAM_ID } from "./constants";
 import { getRentExemptMinimum } from "../services/getReclaimables";
 
@@ -16,11 +16,9 @@ export async function getBalance(pubKey: string) {
 
 // Get account Info
 export async function getAccountInfo(pubKey: string): Promise<AccountInfo> {
-    const addr = address(pubKey);
-
     try {
         const balanceResponse = await getBalance(pubKey);
-        const accountInfoResponse = await rpc.getAccountInfo(address(pubKey)).send();
+        const accountInfoResponse = await rpc.getAccountInfo(address(pubKey.trim())).send();
 
         const accountInfo = accountInfoResponse.value;
         const explorerUrl = `https://solscan.io/account/${pubKey}?cluster=devnet`
@@ -60,7 +58,7 @@ export async function getAccountInfo(pubKey: string): Promise<AccountInfo> {
             status: "active",
             isSystemAccount,
             isTokenAccount,
-            lamports: BigInt(rentExempt || 0),
+            lamports: BigInt(accountInfo?.lamports || 0),
             data, 
             rentExempt,
         }
