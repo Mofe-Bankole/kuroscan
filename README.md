@@ -1,4 +1,4 @@
-___
+# Kuroscan
 **Kuroscan** - The bot that offers fast reclaims over idle accounts
 
 ![Static Badge](https://img.shields.io/badge/demo-live-brightgreen%3F)  ![Static Badge](https://img.shields.io/badge/framework-grammy-blue)  ![Static Badge](https://img.shields.io/badge/Licence-MIT-orange)  ![Static Badge](https://img.shields.io/badge/blockchain-solana-%238C0EEB)  ![Static Badge](https://img.shields.io/badge/platform-telegram-%2385DAF4)
