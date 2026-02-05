@@ -94,5 +94,5 @@ Commands
 /stats --- Returns the bots stats
 
 ```text
-
+[[assets/stats.png]]
 ```

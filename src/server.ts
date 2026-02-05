@@ -1,11 +1,12 @@
 import express from "express";
 import "./bot/telegram"
 import config from "./config/config";
-// import { initSponsor } from "./scripts/scanSponsoredAccounts";
+import bs58 from "bs58";
 import { getBalance  } from "./utils/solana";
 import { supabase } from "./lib/supabase";
 import { getReclaimableAmount } from "./services/getReclaimables";
 import { kuro } from "./bot/telegram";
+import { generateStatCard } from "./utils/canvas";
 
 const app = express();
 
@@ -21,33 +22,19 @@ app.get("/api/v1/health", async (req, res) => {
 
 app.get("/api/v1/sponsored" , async(req , res) => {
     const {data , error} = await supabase.from("sponsored_accounts").select("*")
-
     if (error){
         res.status(500).json("INTERNAL SERVER ERROR")
     }
-
     res.status(200).json(data);
-
-})
-
-app.get("/api/v1/scan" , async(req , res) => {
-    
 })
 
 app.listen(process.env.PORT || 4070, async () => {
     kuro.start()
-    console.log(`Bot Running on PORT ${config.PORT}`);
-    console.log(`Telegram : https://t.me/@kuroscan_bot`);
+    console.log(`-------------------------------------------------------------------------`);
+    console.log(`Bot Running ----------------------------- ${config.PORT}`);
+    console.log(`Kora Node ---------------------- ${config.KORA_RPC_URL}`);
+    console.log(`Telegram ------------------------------- https://t.me/@mui_scan_bot`);
+    console.log(`-------------------------------------------------------------------------`);
+    // await generateStatCard({balance : 122 , signature : "cools" , pubkey : "122dda" ,operator : "mofehimself" , token : "SOL"})
 })
 
-process.on('SIGINT', () => {
-    console.log('Shutting down gracefully...');
-    kuro.stop();
-    process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-    console.log('Shutting down gracefully...');
-    kuro.stop();
-    process.exit(0);
-});

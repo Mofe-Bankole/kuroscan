@@ -10,7 +10,7 @@ import {
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { ReClaimedSolTransaction } from "../utils/types";
-import { OPERATOR_KEYPAIR, OPERATOR_PUBKEY } from "../utils/constants";
+import { OPERATOR_KEYPAIR,OPERATOR_PUBKEY } from "../utils/constants";
 import { fetchSponsoredAccount } from "../utils/db";
 import { decrypt } from "../utils/crypto";
 const connection = new Connection(
@@ -118,7 +118,7 @@ export async function reclaimSystemAccount(
       fromPubkey.toString(),
     );
 
-    // console.log(account_secret_key[0].)
+    // console.log(account_secret_key[0])
 
     if (!account_secret_key || !account_secret_key[0] || !account_secret_key[0].secret_key) {
       return {
@@ -135,7 +135,7 @@ export async function reclaimSystemAccount(
     try {
       const decryptedSecretKey = decrypt(account_secret_key[0].secret_key); // <-- fixed: was [1], use [0]
       ACCOUNT_PRIVATE_KEY = Keypair.fromSecretKey(Uint8Array.from(decryptedSecretKey));
-      console.log(ACCOUNT_PRIVATE_KEY)
+      console.log(ACCOUNT_PRIVATE_KEY);
     } catch (e) {
       return {
         success: false,

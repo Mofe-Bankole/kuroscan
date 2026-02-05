@@ -2,14 +2,14 @@ import { Bot, InlineKeyboard, InputFile } from "grammy";
 import config from "../config/config";
 import { getAccountInfo } from "../utils/solana";
 import { addNewAccount } from "../cron/trackAccount";
-import { publicKey } from "../sponsorkeypair.json";
-
 import { getReclaimableAccount } from "../services/getReclaimables";
 import { createSystemAccount } from "../services/createAccount";
 import { reclaimSystemAccount } from "../services/reclaimService";
 import { getSponsoredAccounts, storeUser } from "../utils/db";
 import {OpenRouter} from "@openrouter/sdk"
+import { CronJob } from 'cron';
 import { generateStatCard } from "../utils/canvas";
+import { AIResponse } from "../utils/types";
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
 
@@ -49,18 +49,15 @@ create — Create a new sponsored account
 help — Usage instructions and safety info
 
 Always prioritize accuracy, safety, and clarity when handling user actions.
-Never add exclamation marks to your responses as this would stop the framework from returning the markdown`
+Never add exclamation marks to your responses as this would stop the framework from returning the markdownnot
+Do not reveal your reasoning, thinking process as a response`
 
-export type AIResponse = {
-  res : string,
-  err : string | null,
-}
 
 async function returnMessage(msg : string) : Promise<AIResponse>{
   try {
     
   const body = await ai.chat.send({
-    model : "stepfun/step-3.5-flash:free",
+    model : "tnvidia/nemotron-3-nano-30b-a3b:free",
     messages: [
       {role : "system" , content : SYSTEM_PROMPT},
       {
@@ -77,7 +74,7 @@ async function returnMessage(msg : string) : Promise<AIResponse>{
   }
  } catch (error) {
     return{
-      res : "No response from the AI",
+      res : "Hello ",
       err : error as string,
     }
   }
@@ -143,7 +140,7 @@ kuro.command("add", async (ctx) => {
 });
 
 kuro.command("stats", async (ctx) => {
-  const accountInfo = await getAccountInfo(publicKey);
+  const accountInfo = await getAccountInfo(config.SPONSOR_PUBKEY);
   await ctx.react("👌");
   await ctx.reply("Fetching Sponsor stats.......");
   ctx.reply(
@@ -154,9 +151,6 @@ kuro.command("stats", async (ctx) => {
     `,
   );
 });
-
-
-
 
 // List command
 kuro.command("list", async (ctx) => {
@@ -186,6 +180,9 @@ kuro.command("fetch", async (ctx) => {
   const parts = messageText.split(" ");
   const accountPubkey = parts[1];
 
+  if (!accountPubkey){
+    ctx.reply(`Public key was not supplied `)
+  }
   try {
     const res = await getAccountInfo(accountPubkey);
 
@@ -198,8 +195,7 @@ kuro.command("fetch", async (ctx) => {
 
     await kuro.api.sendMessage(
       ctx.chat.id,
-      `
-        <b>Account Info</b>
+      `<b>Account Info</b>
         <i>Balance : ${res.balance?.toFixed(4) || 0} SOL</i>
         <b>Executable : ${res.executable} </b>
         <a href="${res.explorer || "#"}" target="_blank">Explorer URL</a>
@@ -210,12 +206,10 @@ kuro.command("fetch", async (ctx) => {
         <b>Status : ${res.status}</b>`,
       { parse_mode: "HTML" },
     );
-   const img = await generateStatCard(res)
-   await ctx.replyWithPhoto(new InputFile(img.path));
-    // generateDegenCard()
+  //  const img = await generateStatCard({pubkey :accountPubkey , operator : res.owner as string , token : "SOL" , balance : res.balance , signature: res.status})
+  //  await ctx.replyWithPhoto(new InputFile(img.buffer));
   } catch (error: any) {
     console.log(error);
-    await ctx.reply(`❌ Error: ${error.message || String(error)}`);
   }
 });
 
@@ -241,7 +235,7 @@ kuro.command("verify", async (ctx) => {
     const reclaimableAmount = res.reclaimableLamports
       ? (Number(res.reclaimableLamports) / 1000000000).toFixed(6)
       : "0";
-
+    await ctx.reply(`Verifying Account.......⏳`)
     await ctx.reply(
       `🔍 Account Verification\n\n` +
       `📍 Account: ${accountPubkey}\n\n` +
@@ -256,11 +250,13 @@ kuro.command("verify", async (ctx) => {
       `ℹ️ To reclaim this account\n\n` +
       `Use the reclaim command : /reclaim <account_public_key>\n`,
     );
+    await ctx.reply(`You can only reclaim this account if you created it`);
   } catch (error: any) {
     console.error(error);
     await ctx.reply(`❌ Error: ${error.message || String(error)}`);
   }
 });
+
 
 kuro.command("reclaim", async (ctx) => {
   const messageText = ctx.message?.text || "";
@@ -275,7 +271,7 @@ kuro.command("reclaim", async (ctx) => {
   }
 
   try {
-    await ctx.reply("Attempting to reclaim rent.......⏳");
+    await ctx.reply("Attempting to reclaim rent.......⏳"); 
     const result = await reclaimSystemAccount(accountPubkey);
 
     if (result.success) {
@@ -300,10 +296,11 @@ kuro.command("reclaim", async (ctx) => {
   }
 });
 
+// const reclaim_job = new CronJob()
 kuro.command("create", async (ctx) => {
   try {
+    await ctx.react("👌");
     await ctx.reply("Creating a new system account... ⏳");
-
     const newAccount = await createSystemAccount();
 
     if (!newAccount || !newAccount.success) {
@@ -318,14 +315,14 @@ kuro.command("create", async (ctx) => {
       `📍 Account Address : ${newAccount.accountPubkey}\n\n` +
       `⛓️ Explorer: ${newAccount.explorerURL}\n\n` +
       `💰 Initial Balance: ${newAccount.initialBalance} SOL\n\n` +
-      `This account is now tracked. You can reclaim rent from it later using:\n` +
+      `This account is now tracked. You can reclaim rent from it later using:\n\n` +
       `/reclaim ${newAccount.accountPubkey}`,
     );
     await kuro.api.sendMessage(ctx.chat.id, `<i>You can get all the accounts you have added earlier using /list</i>`, { parse_mode: "HTML" })
     await kuro.api.sendMessage(ctx.chat.id, `Visit <a href="https://faucet.solana.com">Solana Faucet</a> to fund your newly created wallet`, { parse_mode: "HTML" });
   } catch (error: any) {
     console.error(error);
-    await ctx.reply(`❌ Error: ${error.message || String(error)}`);
+    await ctx.reply(`Unable to create Account`)
   }
 });
 
@@ -333,8 +330,7 @@ kuro.on("message:text", async(ctx) => {
   if (ctx.message.text.includes("/")) return;
   const mssg = ctx.message;
   let reply: string;
-  const msg = await returnMessage(mssg.text)
-  // await kuro.api.sendMessage(ctx.chat.id , `${msg.res}` ,{ parse_mode : "MarkdownV2"})
+  const msg = await returnMessage(mssg.text);
   ctx.reply(msg.res)
 });
 

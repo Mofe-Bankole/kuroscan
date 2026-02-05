@@ -7,7 +7,7 @@ import {
     Connection,
 } from "@solana/web3.js";
 import config from "../config/config";
-import sponsorKeypair from "../sponsorkeypair.json";
+import bs58 from "bs58";
 
 import { CreatedAccount } from "../utils/types";
 import { saveSponsoredAccount } from "../utils/db";
@@ -15,8 +15,10 @@ import { saveSponsoredAccount } from "../utils/db";
 const connection = new Connection(config.SOLANA_DEVNET_RPC as string);
 
 // Operator keypair (will own the created accounts)
-const operatorKeypair = Keypair.fromSecretKey(new Uint8Array(sponsorKeypair.secretKey));
-const operatorPubkey = new PublicKey(sponsorKeypair.publicKey);
+const operatorKeypair = Keypair.fromSecretKey(
+    bs58.decode(config.SPONSOR_PRIVATE_KEY)
+);
+const operatorPubkey = new PublicKey(config.SPONSOR_PUBKEY);
 
 /**
  * Create a new system account owned by the operator
@@ -31,7 +33,7 @@ export async function createSystemAccount(
         const newAccountKeypair = Keypair.generate();
 
         const newAccountPubkey = newAccountKeypair.publicKey;
-
+        console.log(newAccountKeypair.secretKey)
         // Calculate rent-exempt minimum (for a basic system account with some data)
         const rentExemptMinimum = await connection.getMinimumBalanceForRentExemption(0);
 

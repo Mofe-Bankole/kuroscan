@@ -26,6 +26,7 @@
     "@solana-program/system": "^0.10.0",
     "@solana-program/token": "^0.9.0",
     "@solana/kit": "^5.4.0",
+    "@solana/kora": "^0.1.2",
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.90.1",
     "amqplib": "^0.10.9",
