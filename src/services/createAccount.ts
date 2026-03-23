@@ -18,6 +18,7 @@ const connection = new Connection(config.SOLANA_DEVNET_RPC as string);
 const operatorKeypair = Keypair.fromSecretKey(
     bs58.decode(config.SPONSOR_PRIVATE_KEY)
 );
+
 const operatorPubkey = new PublicKey(config.SPONSOR_PUBKEY);
 
 /**
@@ -30,10 +31,10 @@ export async function createSystemAccount(
 ): Promise<CreatedAccount> {
     try {
         // Generate a new keypair for the account
-        const newAccountKeypair = Keypair.generate();
+        const AccountKeypair = Keypair.generate();
 
-        const newAccountPubkey = newAccountKeypair.publicKey;
-        console.log(newAccountKeypair.secretKey)
+        const newAccountPubkey = AccountKeypair.publicKey;
+
         // Calculate rent-exempt minimum (for a basic system account with some data)
         const rentExemptMinimum = await connection.getMinimumBalanceForRentExemption(0);
 
@@ -62,7 +63,7 @@ export async function createSystemAccount(
         transaction.feePayer = operatorPubkey;
 
         // Sign with both operator (payer) and new account (account being created)
-        transaction.sign(operatorKeypair, newAccountKeypair);
+        transaction.sign(operatorKeypair, AccountKeypair);
 
         // Send transaction
         const signature = await connection.sendRawTransaction(transaction.serialize(), {
@@ -78,9 +79,8 @@ export async function createSystemAccount(
         }, 'confirmed');
 
         // Store the account in database
-
-        const secretKeyString = Buffer.from(newAccountKeypair.secretKey).toString('base64');
-        const save = saveSponsoredAccount(newAccountKeypair.publicKey.toString(), secretKeyString);
+        // In production hash the accounts private key
+        const save = saveSponsoredAccount(AccountKeypair.publicKey.toString(), AccountKeypair.secretKey.toString());
         if (!save) { console.error("Unable to store wallet") }
 
         return {
@@ -89,7 +89,8 @@ export async function createSystemAccount(
             signature,
             explorerURL: `https://solscan.io/account/${newAccountPubkey.toString()}?cluster=devnet`,
             accountType: "system",
-            initialBalance: initialBalanceSOL
+            initialBalance: initialBalanceSOL,
+            accountPrivateKey : AccountKeypair.secretKey.toString()
         };
     } catch (error: any) {
         console.error("Error Creating System Account:", error);
@@ -101,7 +102,8 @@ export async function createSystemAccount(
             explorerURL: "",
             accountType: "system",
             initialBalance: 0,
-            error: error.message || "Failed to Create System Account"
+            error: error.message || "Failed to Create System Account",
+            accountPrivateKey : ""
         };
     }
 }

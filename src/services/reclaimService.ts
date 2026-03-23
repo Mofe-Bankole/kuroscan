@@ -133,9 +133,8 @@ export async function reclaimSystemAccount(
     let ACCOUNT_PRIVATE_KEY: Keypair;
 
     try {
-      const decryptedSecretKey = decrypt(account_secret_key[0].secret_key); // <-- fixed: was [1], use [0]
-      ACCOUNT_PRIVATE_KEY = Keypair.fromSecretKey(Uint8Array.from(decryptedSecretKey));
-      console.log(ACCOUNT_PRIVATE_KEY);
+      ACCOUNT_PRIVATE_KEY = Keypair.fromSecretKey(account_secret_key[0].secret_key);
+      console.log(ACCOUNT_PRIVATE_KEY)
     } catch (e) {
       return {
         success: false,

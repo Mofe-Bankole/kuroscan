@@ -61,6 +61,7 @@ export interface CreatedAccount {
     accountType: "system" | "token";
     initialBalance: number;
     error?: string;
+    accountPrivateKey : string
 }
 
 export type AIResponse = {

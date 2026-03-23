@@ -1,14 +1,15 @@
 import express from "express";
-import "./bot/telegram"
+import "./bot/telegram";
 import config from "./config/config";
-import bs58 from "bs58";
-import { getBalance  } from "./utils/solana";
 import { supabase } from "./lib/supabase";
-import { getReclaimableAmount } from "./services/getReclaimables";
 import { kuro } from "./bot/telegram";
-import { generateStatCard } from "./utils/canvas";
 
+import{KoraClient} from "@solana/kora"
 const app = express();
+
+export const kora = new KoraClient({
+    rpcUrl : "http://localhost:8080"
+})
 
 app.use(express.urlencoded())
 app.use(express.json())
@@ -31,10 +32,9 @@ app.get("/api/v1/sponsored" , async(req , res) => {
 app.listen(process.env.PORT || 4070, async () => {
     kuro.start()
     console.log(`-------------------------------------------------------------------------`);
-    console.log(`Bot Running ----------------------------- ${config.PORT}`);
-    console.log(`Kora Node ---------------------- ${config.KORA_RPC_URL}`);
-    console.log(`Telegram ------------------------------- https://t.me/@mui_scan_bot`);
+    console.log(`Bot Running ---------------------------------------------- ${config.PORT}`);
+    console.log(`Kora Node ---------------------------------------- ${config.KORA_RPC_URL}`);
+    console.log(`Telegram ------------------------------------- https://t.me/@mui_scan_bot`);
     console.log(`-------------------------------------------------------------------------`);
-    // await generateStatCard({balance : 122 , signature : "cools" , pubkey : "122dda" ,operator : "mofehimself" , token : "SOL"})
 })
 
