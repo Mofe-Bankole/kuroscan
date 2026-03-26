@@ -13,6 +13,7 @@ export async function getReclaimableAccount(
     try {
         const accountInfo = await getAccountInfo(pubKey);
 
+        /**Exits if theres no account info */
         if (!accountInfo) {
             return {
                 publicKey: pubKey,
@@ -27,8 +28,8 @@ export async function getReclaimableAccount(
         }
 
         const lamports = BigInt(accountInfo.lamports ?? 0);
-
-        // ❌ Program accounts are NEVER reclaimable
+        
+        /**Checks if the account is an executable and in this case cannotbe reclaimed */
         if (accountInfo.executable) {
             return {
                 publicKey: pubKey,
@@ -42,7 +43,7 @@ export async function getReclaimableAccount(
             };
         }
 
-        // ❌ Non-system accounts: reject early
+        /**If account is not from token_2022 it cannot be reclaimed */
         if (!accountInfo.isSystemAccount) {
             return {
                 publicKey: pubKey,
@@ -60,9 +61,9 @@ export async function getReclaimableAccount(
         if (lamports === 0n) {
             return {
                 publicKey: pubKey,
-                reclaimable: false,
-                status: "closed",
-                reason: "Account already drained",
+                reclaimable: true,
+                status: "active",
+                reason: "Account Empty",
                 lamports,
                 rentExemptMinimum: null,
                 reclaimableLamports: 0n,
@@ -92,60 +93,5 @@ export async function getReclaimableAccount(
             reclaimableLamports: 0n,
             isSystemAccount: false,
         };
-    }
-}
-
-export async function getReclaimableAmount(pubkey: string): Promise<ReClaimableAmountInfo> {
-    try {
-        const addr = address(pubkey)
-        const accountInfoResponse = await rpc.getAccountInfo(addr).send();
-        const accountInfo = accountInfoResponse.value;
-
-        const balanceResponse = (await rpc.getBalance(addr).send()).value
-        const balance = Math.abs(parseFloat(balanceResponse.toString()) / LAMPORTS_PER_SOL)
-
-        if (!accountInfo) {
-            return {
-                rentExemptMinimum: 0n,
-                balance: 0,
-                balanceLamports: 0n,
-                rentExemptMinimumSOL: 0,
-                reclaimableAmount: 0n,
-                reclaimableLamports: 0n
-            }
-        }
-
-        const rentExemptMinimum = await rpc.getMinimumBalanceForRentExemption(accountInfo.data.length as any).send()
-        const rentExemptMinimumSOL = parseFloat(rentExemptMinimum?.toString() || "") / LAMPORTS_PER_SOL;
-        const reclaimableLamports = accountInfo.lamports - rentExemptMinimum;
-        const reclaimableAmount = reclaimableLamports - BigInt(LAMPORTS_PER_SOL);
-
-        return {
-            balance,
-            reclaimableAmount,
-            balanceLamports: accountInfo.lamports,
-            rentExemptMinimum,
-            rentExemptMinimumSOL,
-            reclaimableLamports
-        }
-    } catch (error) {
-        console.error("Error calculating reclaimable amount:", error);
-        throw error;
-    }
-}
-
-// Get the rent
-export async function getRentExemptMinimum(data: number) {
-    if (!data) return null;
-
-    try {
-        // getMinimumBalanceForRentExemption expects a number or bigint for space
-        let dataLength = BigInt(data)
-        const minimumResponse = await rpc.getMinimumBalanceForRentExemption(dataLength).send();
-        const minimum = minimumResponse;
-        return parseFloat(minimum.toString())
-    } catch (error) {
-        console.error(error);
-        return null;
     }
 }

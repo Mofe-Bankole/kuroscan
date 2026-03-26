@@ -1,13 +1,9 @@
-import { Bot, InlineKeyboard, InputFile } from "grammy";
-import config from "../config/config";
-import { getAccountInfo } from "../utils/solana";
-import { addNewAccount } from "../cron/trackAccount";
-import { getReclaimableAccount } from "../services/getReclaimables";
+import { Bot } from "grammy";
 import { createSystemAccount } from "../services/createAccount";
-import { reclaimSystemAccount } from "../services/reclaimService";
-import { getSponsoredAccounts, storeUser } from "../utils/db";
 import { OpenRouter } from "@openrouter/sdk";
 import { AIResponse } from "../utils/types";
+import config from "../config/config";
+import { supabase } from "../lib/supabase";
 
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
@@ -97,7 +93,7 @@ kuro.command("help", async (ctx) => {
 });
 
 /**Create A Zombie account */
-kuro.command("/zombie" , async(ctx) => {
+kuro.command("zombie" , async(ctx) => {
     await ctx.reply("Creating a Zombie Account.....");
     const account_data = await createSystemAccount()
     if(!account_data.success){
@@ -107,6 +103,12 @@ kuro.command("/zombie" , async(ctx) => {
     await ctx.reply("Zombie Account has been created")
 })
 
-kuro.command("/reclaim" ,async(ctx) => {
-  await ctx
+kuro.command("reclaim" , async(ctx) => {
+  await ctx.reply("Reclaiming Rent...")
+  const accounts = await supabase.from("sponsored_accounts").select("*")
+  console.log(accounts)
+})
+
+kuro.on("message:text", async(ctx) => {
+  await ctx.reply("Hey im Kuroscan and i help devs reclaim SOL");
 })

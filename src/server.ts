@@ -3,8 +3,8 @@ import "./bot/telegram";
 import config from "./config/config";
 import { supabase } from "./lib/supabase";
 import { kuro } from "./bot/telegram";
+import{KoraClient} from "@solana/kora";
 
-import{KoraClient} from "@solana/kora"
 const app = express();
 
 export const kora = new KoraClient({
@@ -29,8 +29,8 @@ app.get("/api/v1/sponsored" , async(req , res) => {
     res.status(200).json(data);
 })
 
+kuro.start()
 app.listen(process.env.PORT || 4070, async () => {
-    kuro.start()
     console.log(`-------------------------------------------------------------------------`);
     console.log(`Bot Running ---------------------------------------------- ${config.PORT}`);
     console.log(`Kora Node ---------------------------------------- ${config.KORA_RPC_URL}`);

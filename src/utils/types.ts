@@ -18,7 +18,7 @@ export type AccountInfo = {
     exists: boolean;
     data: number | null;
     lamports: bigint;
-    rentExempt: number | null;
+    // rentExempt: number | null;
 }
 
 // export interface ReclaimableAccount{

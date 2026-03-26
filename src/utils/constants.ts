@@ -9,5 +9,3 @@ export const TOKEN_2022_PROGRAM_ID = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC
 export const SYSTEM_PROGRAM = new PublicKey("11111111111111111111111111111111");
 
 export const OPERATOR_PUBKEY = new PublicKey(config.SPONSOR_PUBKEY);
-
-export const OPERATOR_KEYPAIR = Keypair.fromSecretKey(bs58.decode(config.SPONSOR_PRIVATE_KEY));
