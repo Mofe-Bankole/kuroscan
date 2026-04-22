@@ -1,5 +1,4 @@
 import { supabase } from "../lib/supabase";
-import { decrypt, encrypt } from "./crypto";
 
 export type SponsoredAccount = {
   public_key: string;
@@ -23,7 +22,7 @@ export async function getSponsoredAccounts() {
   // Fetch sponsor and account public keys from the "sponsored_accounts" table
   const { data, error } = await supabase
     .from("sponsored_accounts")
-    .select("public_key, status");
+    .select("public_key, status, secret_key");
 
   // Handle any errors that occur during fetch
   if (error) {
@@ -34,20 +33,7 @@ export async function getSponsoredAccounts() {
   return data;
 }
 
-export async function getSponsoredAccount(publicKey: string) {
-  const { data, error } = await supabase
-    .from("sponsored_accounts")
-    .select()
-    .eq("account_pubkey", publicKey);
-
-  if (error) {
-    console.error(error.message);
-    throw error;
-  }
-
-  return data;
-}
-
+// export async function fetchALll
 export async function fetchTelegramId(id: number) {
   const { data, error } = await supabase
     .from("users")
@@ -109,11 +95,11 @@ export async function fetchOperatorSponsoredAccounts(id: number) {
 
 export async function saveSponsoredAccount(
   public_key: string,
-  secret_key: any,
+  secret_key: string,
 ) {
   const { error } = await supabase.from("sponsored_accounts").insert({
     public_key: public_key,
-    secret_key: encrypt(secret_key),
+    secret_key: secret_key,
     status: "active",
   });
 
@@ -123,8 +109,9 @@ export async function saveSponsoredAccount(
 export async function fetchSponsoredAccount(public_key: string) {
   const { data, error } = await supabase
     .from("sponsored_accounts")
-    .select("public_key, secret_key")
+    .select("public_key")
     .eq("public_key", public_key);
+
   if (error) {
     console.error(error);
     throw error;

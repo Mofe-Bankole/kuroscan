@@ -11,19 +11,11 @@ import bs58 from "bs58";
 import { CreatedAccount } from "../utils/types";
 import { saveSponsoredAccount } from "../utils/db";
 
-const connection = new Connection(config.SOLANA_DEVNET_RPC as string || "https://api.devnet.solana.com/");
-
+export const connection = new Connection(config.SOLANA_DEVNET_RPC as string || "https://api.devnet.solana.com/");
 // Operator keypair (will own the created accounts)
-const operatorKeypair = Keypair.fromSecretKey(
-   Uint8Array.from([124,229,56,205,106,195,19,22,206,95,145,70,34,151,34,24,233,131,206,198,147,216,120,95,130,70,219,103,51,140,99,145,209,162,4,18,85,86,144,21,25,113,237,80,214,112,64,206,172,53,129,126,117,22,173,144,212,208,28,22,81,223,3,159])
-);
-console.log(operatorKeypair.secretKey)
+const operatorKeypair = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(config.KORA_PRIVATE_KEY)))
 const operatorPubkey = new PublicKey(operatorKeypair.publicKey);
-/**
- * Create a new system account owned by the operator
- * 
- * This account can later be reclaimed
- */
+
 export async function createSystemAccount(
     initialBalanceSOL: number = 0.1 // Default 0.1 SOL
 ): Promise<CreatedAccount> {

@@ -4,6 +4,7 @@ import { OpenRouter } from "@openrouter/sdk";
 import { AIResponse } from "../utils/types";
 import config from "../config/config";
 import { supabase } from "../lib/supabase";
+import { scanWallets } from "../services/reclaimService";
 
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
@@ -99,13 +100,14 @@ kuro.command("zombie" , async(ctx) => {
     if(!account_data.success){
       await ctx.reply(`Failed to Create Zombie ${account_data.error} `)
     }
-    await kuro.api.sendMessage(ctx.chatId , `Created Zombie Account/nAccount Pubkey : ${account_data.accountPubkey}/n/nPrivate Key : ${account_data.accountPrivateKey}/n/nExplorer URL`, {parse_mode : "HTML"})
+    await kuro.api.sendMessage(ctx.chatId , `Created Zombie Account/n/nAccount Details Below/n/nAccount Pubkey : ${account_data.accountPubkey.toString()}/n/nExplorer URL : ${account_data.explorerURL}/n/nNetwork : Devnet`, {parse_mode : "MarkdownV2"})
     await ctx.reply("Zombie Account has been created")
 })
 
 kuro.command("reclaim" , async(ctx) => {
   await ctx.reply("Reclaiming Rent...")
-  const accounts = await supabase.from("sponsored_accounts").select("*")
+  const accounts = await scanWallets()
+  await ctx.reply(`${accounts}`)
   console.log(accounts)
 })
 
