@@ -1,0 +1,8 @@
+# signers.toml
+[signer_pool]
+strategy = "round_robin"
+
+[[signers]]
+name = "devnet_signer"
+type = "memory"
+private_key_env = "SPONSOR_PRIVATE_KEY"
