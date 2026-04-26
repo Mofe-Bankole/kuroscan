@@ -1,20 +1,19 @@
 import { supabase } from "../lib/supabase";
 export type SponsoredAccount = {
-    account_pubkey : string;
-    sponsor_pubkey : string;
-}
-
+  account_pubkey: string;
+  sponsor_pubkey: string;
+};
 
 export async function getSponsoredAccount(publicKey: string) {
-    const { data , error } = await supabase
-        .from("sponsored_accounts")
-        .select()
-        .eq("account_pubkey", publicKey)
+  const { data, error } = await supabase
+    .from("sponsored_accounts")
+    .select()
+    .eq("account_pubkey", publicKey);
 
-    if (error) {
-        console.error(error.message)
-        throw error;
-    }
+  if (error) {
+    console.error(error.message);
+    throw error;
+  }
 
-    return data;
+  return data;
 }

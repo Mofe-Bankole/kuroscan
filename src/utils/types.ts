@@ -24,7 +24,7 @@ export type AccountInfo = {
 // export interface ReclaimableAccount{
 // }
 
-export interface ReClaimableAccount {
+export interface ReclaimableAccount {
     publicKey: string;        // THe acconts publickey
     reclaimable: boolean;     // States if its reclaimable
     status: "active" | "closed";  // Stus of the account

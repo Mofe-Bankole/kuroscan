@@ -1,85 +1,32 @@
 import { Bot } from "grammy";
 import { createSystemAccount } from "../services/createAccount";
-import { OpenRouter } from "@openrouter/sdk";
-import { AIResponse } from "../utils/types";
 import config from "../config/config";
-import { supabase } from "../lib/supabase";
-import { scanWallets } from "../services/reclaimService";
+import { fetchWalletInfo } from "../services/fetchAccount";
+import { Lamports } from "@solana/kit";
+import { kora } from "../server";
+import { getSponsoredAccounts } from "../utils/db";
+import { setTimeout } from "node:timers";
+import { getReclaimableAccount } from "../services/getReclaimables";
 
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
-
-export const ai = new OpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
-
-const SYSTEM_PROMPT = `You are Mui_scan a Telegram bot built to help developers scan, verify, and reclaim rent from Solana accounts.
-You operate on Kora Nodes and are designed to be fast, reliable, and precise, just like the Mist Hashira you’re named after.
-
-Your tone is friendly, confident, and helpful. Keep responses short and clear (2–4 lines max when possible).
-Use appropriate emojis to keep conversations engaging, but never overdo it.
-
-Your primary focus is Solana, Web3, and rent reclamation.
-If the user briefly strays into normal conversation, respond politely and casually — but switch back to developer mode immediately once Solana or Web3 topics come up.
-
-Do not stress about being perfect. You are already doing great. Stay helpful, calm, and developer-focused.
-
-Available Commands:
-
-stats — View total sponsored rent, reclaimed SOL, and active accounts
-
-accounts — List accounts sponsored by this Kora Node
-
-scan — Run a rent scan
-
-idle — Show accounts eligible for rent reclaim
-
-verify — Check if an account is reclaimable and show its details
-
-reclaim — Manually reclaim rent from eligible accounts
-
-list — List all sponsored accounts
-
-create — Create a new sponsored account
-
-help — Usage instructions and safety info
-
-Always prioritize accuracy, safety, and clarity when handling user actions.
-Never add exclamation marks to your responses as this would stop the framework from returning the markdownnot
-Do not reveal your reasoning, thinking process as a response`;
-
-async function returnMessage(msg: string): Promise<AIResponse> {
-  try {
-    const body = await ai.chat.send({
-      model: "tnvidia/nemotron-3-nano-30b-a3b:free",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: msg,
-        },
-      ],
-      stream: false,
-    });
-
-    return {
-      res: body.choices[0].message.content as string,
-      err: null,
-    };
-  } catch (error) {
-    return {
-      res: "Hello ",
-      err: error as string,
-    };
-  }
-}
 
 kuro.command("start", async (ctx) => {
   await ctx.reply(
     "Hey I'm Tokito 👋 a bot dedicated to scanning the Kora node for dormant SOL 💰accounts\n\nMy name's based on the Mist Hashira  Muichiro Tokito since I'm pretty fast and reliable 🙂\n\nChat me up to get started",
   );
+  await kuro.api.sendMessage(
+    ctx.chat.id,
+    `**Here are the things i can do**:` +
+      `Fetch Stats : Say 'Fetch my Kora Node Stats' or type **/stats**` +
+      `Create Zombie Account : Say 'Create a Zombie Account' or type **/zombie**`,
+    {
+      parse_mode: "MarkdownV2",
+    },
+  );
 });
 
+kuro.command("stats", async (ctx) => {});
 kuro.command("help", async (ctx) => {
   await ctx.reply("Here are all my available commands 💨");
   await ctx.reply(
@@ -88,29 +35,76 @@ kuro.command("help", async (ctx) => {
       `/stats - Status of your sponsor / Kora Node\n` +
       `/list - List all sponsored accounts\n` +
       `/verify - Verify if an account is reclaimable\n` +
-      `/fetch - Fetch an accounts info\n`+
-      `/zombie - Create a Zombie Account`
+      `/fetch - Fetch an accounts info\n` +
+      `/zombie - Create a Zombie Account`,
   );
 });
 
 /**Create A Zombie account */
-kuro.command("zombie" , async(ctx) => {
-    await ctx.reply("Creating a Zombie Account.....");
-    const account_data = await createSystemAccount()
-    if(!account_data.success){
-      await ctx.reply(`Failed to Create Zombie ${account_data.error} `)
-    }
-    await kuro.api.sendMessage(ctx.chatId , `Created Zombie Account/n/nAccount Details Below/n/nAccount Pubkey : ${account_data.accountPubkey.toString()}/n/nExplorer URL : ${account_data.explorerURL}/n/nNetwork : Devnet`, {parse_mode : "MarkdownV2"})
-    await ctx.reply("Zombie Account has been created")
-})
 
-kuro.command("reclaim" , async(ctx) => {
-  await ctx.reply("Reclaiming Rent...")
-  const accounts = await scanWallets()
-  await ctx.reply(`${accounts}`)
-  console.log(accounts)
-})
+kuro.hears("Create a Zombie Account", async (ctx) => {
+  await ctx.reply("Creating a Zombie Account.....");
+  const account_data = await createSystemAccount();
+  if (!account_data.success) {
+    await ctx.reply(`Failed to Create Zombie ${account_data.error} `);
+  }
+  await kuro.api.sendMessage(
+    ctx.chatId,
+    `<b>Created Zombie Account</b>\n\n<b>Account Details Below</b>\n\n<b>Account Pubkey :</b> <code>${account_data.accountPubkey.toString()}</code>\n\n<b>Explorer URL :</b> <a href="${account_data.explorerURL}">${account_data.explorerURL}</a>\n\n<b>Network :</b> Devnet`,
+    { parse_mode: "HTML" },
+  );
+  await ctx.reply(`Private Key Has Been Persisted in Supabase`);
+  await ctx.reply("Zombie Account has been created Successfully");
+});
 
-kuro.on("message:text", async(ctx) => {
+kuro.command("zombie", async (ctx) => {
+  await ctx.reply("Creating a Zombie Account.....");
+  const account_data = await createSystemAccount();
+  if (!account_data.success) {
+    await ctx.reply(`Failed to Create Zombie ${account_data.error} `);
+  }
+  await kuro.api.sendMessage(
+    ctx.chatId,
+    `<b>Created Zombie Account</b>\n\n<b>Account Details Below</b>\n\n<b>Account Pubkey :</b> <code>${account_data.accountPubkey.toString()}</code>\n\n<b>Explorer URL :</b> <a href="${account_data.explorerURL}">${account_data.explorerURL}</a>\n\n<b>Network :</b> Devnet`,
+    { parse_mode: "HTML" },
+  );
+  await ctx.reply(`Private Key Has Been Persisted in Supabase`);
+  await ctx.reply("Zombie Account has been created Successfully");
+});
+
+kuro.command("fetch", async (ctx) => {
+  const msg = ctx.msg.text;
+  // Get the second argument (word) supplied via text
+  const parts = msg.split(" ");
+  const walletaddr = parts[1];
+
+  const accountINFO = await fetchWalletInfo(walletaddr);
+
+  await kuro.api.sendMessage(
+    ctx.chat.id,
+    `<b>Account Info</b>\n\nPublicKey : <code>${walletaddr}</code>\n\nBalance : <b>${(accountINFO?.balance as Lamports) / 1000000000n} SOL</b>`,
+    { parse_mode: "HTML" },
+  );
+});
+
+kuro.command("reclaim", async (ctx) => {
+  setTimeout(() => {
+    ctx.reply("Fetching All Sponsored Accounts...");
+  }, 1200);
+  const reclaimables: any = [];
+  const baseAccountArray: any = [];
+  const accounts = await getSponsoredAccounts();
+  console.log(accounts);
+  // for (const acc in accounts) {
+  //   baseAccountArray.push(acc);
+  //   const reclaimables = await getReclaimableAccount();
+  // }
+  //
+  await ctx.reply(
+    `There are ${accounts.length} account(s) that can be reclaimed`,
+  );
+});
+
+kuro.on("message:text", async (ctx) => {
   await ctx.reply("Hey im Kuroscan and i help devs reclaim SOL");
-})
+});
