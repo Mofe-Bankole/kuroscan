@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const PORT = process.env.PORT;
+const KORA_RPC_URL = process.env.KORA_RPC_URL;
+const HELIUS_DEVNET_RPC = process.env.HELIUS_DEVNET_RPC;
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const SOLANA_DEVNET_RPC = process.env.SOLANA_DEVNET_RPC;
+const KORA_DEVNET_API = process.env.KORA_DEVNET_API;
+const NODE_PUBLIC_SUPABASE_URL = process.env.NODE_PUBLIC_SUPABASE_URL;
+const NODE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY = process.env.NODE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+const SPONSOR_PUBKEY = process.env.KORA_SPONSOR_PUBLIC_KEY;
+const KORA_PRIVATE_KEY = process.env.KORA_PRIVATE_KEY;
+const config = { PORT, KORA_RPC_URL, SPONSOR_PUBKEY, KORA_PRIVATE_KEY, SOLANA_DEVNET_RPC, HELIUS_DEVNET_RPC, BOT_TOKEN, KORA_DEVNET_API, NODE_PUBLIC_SUPABASE_URL, NODE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY };
+exports.default = config;

@@ -23,7 +23,7 @@ export async function getReclaimableAccount(
 
     const lamports = BigInt(accountInfo.lamports ?? 0);
 
-    /**Checks if the account is an executable and in this case cannotbe reclaimed */
+    /**Checks if the account is an executable and in this case cannot be reclaimed */
     if (accountInfo.executable) {
       return {
         publicKey: pubKey,
@@ -52,6 +52,7 @@ export async function getReclaimableAccount(
     }
 
     // ❌ Empty account
+    // Can be Reclaimed
     if (lamports === 0n) {
       return {
         publicKey: pubKey,

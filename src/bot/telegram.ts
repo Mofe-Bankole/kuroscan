@@ -3,10 +3,7 @@ import { createSystemAccount } from "../services/createAccount";
 import config from "../config/config";
 import { fetchWalletInfo } from "../services/fetchAccount";
 import { Lamports } from "@solana/kit";
-import { kora } from "../server";
-import { getSponsoredAccounts } from "../utils/db";
-import { setTimeout } from "node:timers";
-import { getReclaimableAccount } from "../services/getReclaimables";
+import { reclaimSponsoredAccounts } from "../services/reclaimService";
 
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
@@ -88,21 +85,50 @@ kuro.command("fetch", async (ctx) => {
 });
 
 kuro.command("reclaim", async (ctx) => {
-  setTimeout(() => {
-    ctx.reply("Fetching All Sponsored Accounts...");
-  }, 1200);
-  const reclaimables: any = [];
-  const baseAccountArray: any = [];
-  const accounts = await getSponsoredAccounts();
-  console.log(accounts);
-  // for (const acc in accounts) {
-  //   baseAccountArray.push(acc);
-  //   const reclaimables = await getReclaimableAccount();
-  // }
-  //
-  await ctx.reply(
-    `There are ${accounts.length} account(s) that can be reclaimed`,
-  );
+  await ctx.reply("Fetching your sponsored accounts and reclaimable balances...");
+
+  try {
+    const summary = await reclaimSponsoredAccounts();
+
+    if (summary.reclaimed.length === 0 && summary.skipped.length === 0) {
+      await ctx.reply("No sponsored accounts were found.");
+      return;
+    }
+
+    const lines = [
+      `<b>Reclaim Summary</b>`,
+      ``,
+      `<b>Reclaimed Accounts:</b> ${summary.reclaimed.length}`,
+      `<b>Total Reclaimed:</b> ${summary.totalSol} SOL`,
+    ];
+
+    if (summary.reclaimed.length > 0) {
+      lines.push(
+        "",
+        ...summary.reclaimed.map(
+          (item) =>
+            `• <code>${item.account}</code>\nTo: <code>${item.destination}</code>\nSignature: <code>${item.signature}</code>`,
+        ),
+      );
+    }
+
+    if (summary.skipped.length > 0) {
+      lines.push(
+        "",
+        `<b>Skipped / Failed:</b> ${summary.skipped.length}`,
+        ...summary.skipped.map(
+          (item) =>
+            `• <code>${item.account}</code> - ${item.reason ?? "Skipped"}`,
+        ),
+      );
+    }
+
+    await kuro.api.sendMessage(ctx.chat.id, lines.join("\n"), {
+      parse_mode: "HTML",
+    });
+  } catch (error: any) {
+    await ctx.reply(`Reclaim failed: ${error?.message ?? "Unknown error"}`);
+  }
 });
 
 kuro.on("message:text", async (ctx) => {

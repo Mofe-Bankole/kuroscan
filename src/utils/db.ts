@@ -19,6 +19,13 @@ export type DBAccount = {
   secret_key: any;
 };
 
+export type SponsoredAccountWithSecret = {
+  public_key: string;
+  status: string;
+  secret_key: string;
+  sponsor_pubkey: string;
+};
+
 export async function getSponsoredAccounts() {
   // Fetch sponsor and account public keys from the "sponsored_accounts" table
   const { data, error } = await supabase
@@ -49,49 +56,21 @@ export async function fetchTelegramId(id: number) {
   return data;
 }
 
-export async function fetchSponsor(id: number) {
-  const user_id = await fetchTelegramId(id);
-  const ownerId = user_id && user_id[0] ? user_id[0].id : null;
-  if (!ownerId) {
-    throw new Error("User not found, cannot fetch sponsors.");
-  }
+export async function fetchSponsor() {
+  // Fetch the sponsor_pubkey values from the sponsored_accounts table
   const { data, error } = await supabase
-    .from("sponsors")
-    .select("public_key , telegram_user_id, owner")
-    .eq("owner", ownerId);
+    .from("sponsored_accounts")
+    .select("sponsor_pubkey");
 
   if (error) {
-    console.error(error);
+    console.error("Error fetching sponsor_pubkey:", error);
     throw error;
   }
 
   return data;
 }
 
-export async function fetchOperatorSponsoredAccounts(id: number) {
-  const sponsors = await fetchSponsor(id);
-
-  if (!sponsors || sponsors.length === 0) {
-    return [];
-  }
-
-  const sponsorPubKey = sponsors[0].public_key;
-
-  if (!sponsorPubKey) {
-    throw new Error("Sponsor public key not found.");
-  }
-
-  const { data, error } = await supabase
-    .from("sponsored_accounts")
-    .select("id, created_at, public_key, secret_key, owner_public_key")
-    .eq("owner_public_key", sponsorPubKey);
-
-  if (error) {
-    console.error(error);
-    throw error;
-  }
-
-  return (data || []) as spaacc[];
+export async function fetchOperatorSponsoredAccounts() {
 }
 
 export async function saveSponsoredAccount(
@@ -107,11 +86,10 @@ export async function saveSponsoredAccount(
   return !error;
 }
 
-export async function fetchSponsoredAccount(public_key: string) {
+export async function fetchSponsoredAccounts() {
   const { data, error } = await supabase
     .from("sponsored_accounts")
-    .select("public_key")
-    .eq("public_key", public_key);
+    .select("public_key, status");
 
   if (error) {
     console.error(error);
@@ -119,6 +97,37 @@ export async function fetchSponsoredAccount(public_key: string) {
   }
 
   return data;
+}
+
+export async function fetchSponsoredAccountsAndPrivateKey() {
+  const { data, error } = await supabase
+    .from("sponsored_accounts")
+    .select("public_key, status, secret_key, sponsor_pubkey");
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return (data || []) as SponsoredAccountWithSecret[];
+}
+
+
+export async function updateSponsoredAccountStatus(
+  public_key: string,
+  status: "active" | "closed" | "reclaimed",
+) {
+  const { error } = await supabase
+    .from("sponsored_accounts")
+    .update({ status })
+    .eq("public_key", public_key);
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return true;
 }
 
 export async function fetchUserId(id: number) {

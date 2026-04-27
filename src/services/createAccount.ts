@@ -12,20 +12,21 @@ import { saveSponsoredAccount } from "../utils/db";
 import { createSolanaRpc } from "@solana/kit";
 
 export const DEVNET_CONNECTION = new Connection(
-  "https://api.devnet.solana.com",
+  "https://api.devnet.solana.com"
 );
 export const MAINNET_CONNECTION = createSolanaRpc(
-  "https://api.mainnet-beta.solana.com/",
+  config.SOLANA_DEVNET_RPC!
 );
 export const DEVNET_SOLANA_CONNECTION = createSolanaRpc(
-  "https://api.devnet.solana.com",
+  config.SOLANA_DEVNET_RPC!
 );
 
 // Operator keypair (will own the created accounts)
 const operatorKeypair = Keypair.fromSecretKey(
   Uint8Array.from(JSON.parse(config.KORA_PRIVATE_KEY)),
 );
-const operatorPubkey = new PublicKey(operatorKeypair.publicKey);
+
+export const operatorPubkey = new PublicKey(operatorKeypair.publicKey);
 
 export async function createSystemAccount(
   initialBalanceSOL: number = 0.1,
