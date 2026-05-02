@@ -16,11 +16,6 @@ export const kora = new KoraClient({
 app.use(express.urlencoded());
 app.use(express.json());
 
-const now = Intl.DateTimeFormat("en-NG", {
-  dateStyle: "medium",
-  timeStyle: "medium",
-}).format(new Date());
-
 app.get("/api/v1/health", async (req, res) => {
   res.status(200).json({
     message: "Kuroscan API",
@@ -28,6 +23,15 @@ app.get("/api/v1/health", async (req, res) => {
     status: "active",
     statusCode: 200,
     data: (await kora.getConfig()).fee_payers,
+  });
+});
+app.get("/api/v1/config", async (req, res) => {
+  res.status(200).json({
+    message: "Kuroscan API",
+    health: "OK",
+    status: "active",
+    statusCode: 200,
+    config: await kora.getConfig(),
   });
 });
 

@@ -6,14 +6,6 @@ export type SponsoredAccount = {
   status: string;
 };
 
-export type spaacc = {
-  id: number;
-  created_at: string;
-  public_key: string;
-  secret_key: string;
-  owner_public_key: string;
-};
-
 export type DBAccount = {
   public_key: string;
   secret_key: any;
@@ -70,8 +62,7 @@ export async function fetchSponsor() {
   return data;
 }
 
-export async function fetchOperatorSponsoredAccounts() {
-}
+export async function fetchOperatorSponsoredAccounts() {}
 
 export async function saveSponsoredAccount(
   public_key: string,
@@ -112,7 +103,6 @@ export async function fetchSponsoredAccountsAndPrivateKey() {
   return (data || []) as SponsoredAccountWithSecret[];
 }
 
-
 export async function updateSponsoredAccountStatus(
   public_key: string,
   status: "active" | "closed" | "reclaimed",
@@ -150,4 +140,17 @@ export async function storeUser(id: number) {
   });
 
   return !error;
+}
+
+export async function fetchSponsoredAccountsNumber() {
+  const { data, error } = await supabase
+    .from("sponsored_accounts")
+    .select("status");
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return data;
 }

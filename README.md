@@ -1,16 +1,22 @@
 # Kuroscan
+
+## Overview
+
+Kuroscan is a Telegram bot built on the Solana blockchain that enables fast, secure management of sponsored system accounts. It can create accounts, monitor rent‑exempt balances, and safely reclaim unused SOL without risking accidental rent drains.
+
+---
 **Kuroscan** - The bot that offers fast reclaims over idle accounts
 
 ![Static Badge](https://img.shields.io/badge/demo-live-brightgreen%3F)  ![Static Badge](https://img.shields.io/badge/framework-grammy-blue)  ![Static Badge](https://img.shields.io/badge/Licence-MIT-orange)  ![Static Badge](https://img.shields.io/badge/blockchain-solana-%238C0EEB)  ![Static Badge](https://img.shields.io/badge/platform-telegram-%2385DAF4)
 
-What is Kuroscan 🤔?
+## What is Kuroscan?
 
 Kuroscan is a telegram bot that **creates sponsored system accounts**, **tracks rent-exempt balances**, and **safely reclaims unused SOL** — without risking accidental rent drains.
 
-In other words , Kuroscan is a **Solana account sponsorship and lifecycle management system**
+In other words, Kuroscan is a **Solana account sponsorship and lifecycle‑management system**.
 
-___
-##### Why Kuroscan ?
+___'[p;]
+## Why Use Kuroscan?
 
 | Params     | Dashboard                                                                                                                        | Kuroscan                                                                                                                      |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -42,13 +48,13 @@ ___
 ___
 To run Kuroscan you'll need you need to visit [BotFather](https://t.me/botfather) to acquire your **own** bot token
 
-###### Prerequisites
+## Prerequisites
 
 - [Nodejs](https://nodejs.org/en) v22 or later
 - Basic Knowledge of telegram bots, typescript, Solana
 - A telegram account
 
-##### Quick Start
+## Quick Start
 
 Clone the repository
 
@@ -74,7 +80,7 @@ Run the bot
 npm run start
 ```
 
-Commands
+## Bot Commands
 
 | Command      | Parameters | Description                                                                                                                                     |
 | ------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -89,7 +95,7 @@ Commands
 > [!NOTE] NOTE
 > Accounts created by Kuroscan can only be reclaimed if the account and the operator sign the operations
 
-#### Responses
+## Sample Responses
 
 /stats --- Returns the bots stats
 

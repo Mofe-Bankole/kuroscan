@@ -4,6 +4,8 @@ import config from "../config/config";
 import { fetchWalletInfo } from "../services/fetchAccount";
 import { Lamports } from "@solana/kit";
 import { reclaimSponsoredAccounts } from "../services/reclaimService";
+import { kora } from "../server";
+import { fetchSponsoredAccountsNumber } from "../utils/db";
 
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
@@ -23,7 +25,11 @@ kuro.command("start", async (ctx) => {
   );
 });
 
-kuro.command("stats", async (ctx) => {});
+kuro.command("stats", async (ctx) => {
+  const accounts_reclaimed = await fetchSponsoredAccountsNumber();
+  
+  
+});
 kuro.command("help", async (ctx) => {
   await ctx.reply("Here are all my available commands 💨");
   await ctx.reply(
@@ -85,7 +91,9 @@ kuro.command("fetch", async (ctx) => {
 });
 
 kuro.command("reclaim", async (ctx) => {
-  await ctx.reply("Fetching your sponsored accounts and reclaimable balances...");
+  await ctx.reply(
+    "Fetching your sponsored accounts and reclaimable balances...",
+  );
 
   try {
     const summary = await reclaimSponsoredAccounts();
@@ -100,6 +108,55 @@ kuro.command("reclaim", async (ctx) => {
       ``,
       `<b>Reclaimed Accounts:</b> ${summary.reclaimed.length}`,
       `<b>Total Reclaimed:</b> ${summary.totalSol} SOL`,
+    ];
+
+    if (summary.reclaimed.length > 0) {
+      lines.push(
+        "",
+        ...summary.reclaimed.map(
+          (item) =>
+            `• <code>${item.account}</code>\nTo: <code>${item.destination}</code>\nSignature: <code>${item.signature}</code>`,
+        ),
+      );
+    }
+
+    if (summary.skipped.length > 0) {
+      lines.push(
+        "",
+        `<b>Skipped / Failed:</b> ${summary.skipped.length}`,
+        ...summary.skipped.map(
+          (item) =>
+            `• <code>${item.account}</code> - ${item.reason ?? "Skipped"}`,
+        ),
+      );
+    }
+
+    await kuro.api.sendMessage(ctx.chat.id, lines.join("\n"), {
+      parse_mode: "HTML",
+    });
+  } catch (error: any) {
+    await ctx.reply(`Reclaim failed: ${error?.message ?? "Unknown error"}`);
+  }
+});
+
+kuro.hears("Reclaim all owed rent", async (ctx) => {
+  await ctx.reply(
+    "Fetching your sponsored accounts and reclaimable balances...",
+  );
+
+  try {
+    const summary = await reclaimSponsoredAccounts();
+
+    if (summary.reclaimed.length === 0 && summary.skipped.length === 0) {
+      await ctx.reply("No sponsored accounts were found.");
+      return;
+    }
+
+    const lines = [
+      `<b>Reclaim Summary</b>`,
+      ``,
+      `\n<b>Reclaimed Accounts:</b> ${summary.reclaimed.length}`,
+      `\n<b>Total Reclaimed:</b> ${summary.totalSol} SOL`,
     ];
 
     if (summary.reclaimed.length > 0) {
