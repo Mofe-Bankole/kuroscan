@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Kuroscan is a rent reclaim bot for solana devs that provides an easy to use interface via telegram",
   "main": "src/server.ts",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "nodemon": "nodemon src/server.ts",
