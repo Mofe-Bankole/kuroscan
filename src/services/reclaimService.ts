@@ -6,13 +6,13 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
-import { DEVNET_CONNECTION } from "./createAccount";
 import { getReclaimableAccount } from "./getReclaimables";
 import {
   fetchSponsoredAccountsAndPrivateKey,
   SponsoredAccountWithSecret,
   updateSponsoredAccountStatus,
 } from "../utils/db";
+import { DEVNET_CONNECTION } from "../config/rpc";
 
 type ReclaimResult = {
   account: string;
@@ -67,7 +67,8 @@ async function reclaimSingleAccount(
 
   const signer = Keypair.fromSecretKey(bs58.decode(account.secret_key));
   const destination = new PublicKey(account.sponsor_pubkey);
-  const latestBlockhash = await DEVNET_CONNECTION.getLatestBlockhash("finalized");
+  const latestBlockhash =
+    await DEVNET_CONNECTION.getLatestBlockhash("finalized");
 
   const feeProbe = new Transaction({
     feePayer: signer.publicKey,
@@ -80,8 +81,10 @@ async function reclaimSingleAccount(
     }),
   );
 
-  const estimatedFee =
-    BigInt((await DEVNET_CONNECTION.getFeeForMessage(feeProbe.compileMessage())).value ?? 0);
+  const estimatedFee = BigInt(
+    (await DEVNET_CONNECTION.getFeeForMessage(feeProbe.compileMessage()))
+      .value ?? 0,
+  );
 
   if (reclaimInfo.reclaimableLamports <= estimatedFee) {
     return {

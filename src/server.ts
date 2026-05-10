@@ -5,6 +5,7 @@ import "./bot/telegram";
 import config from "./config/config";
 import { kuro } from "./bot/telegram";
 import { KoraClient } from "@solana/kora";
+import { startAutoReclaimScheduler } from "./cron/autoReclaim";
 
 const app = express();
 kuro.start();
@@ -22,7 +23,7 @@ app.get("/api/v1/health", async (req, res) => {
     health: "OK",
     status: "active",
     statusCode: 200,
-    data: (await kora.getConfig()).fee_payers,
+    sponsors: (await kora.getConfig()).fee_payers,
   });
 });
 app.get("/api/v1/config", async (req, res) => {
@@ -45,4 +46,8 @@ app.listen(process.env.PORT || 4070, async () => {
   console.log(
     `Telegram --------------------------------------------------------- https://t.me/@mui_scan_bot`,
   );
+
+  startAutoReclaimScheduler();
 });
+
+// process;

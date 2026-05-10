@@ -6,6 +6,7 @@ import { Lamports } from "@solana/kit";
 import { reclaimSponsoredAccounts } from "../services/reclaimService";
 import { kora } from "../server";
 import { fetchSponsoredAccountsNumber } from "../utils/db";
+import { handleZombie } from "../helpers/handleZombie.helper";
 
 // Bot initializer
 export const kuro = new Bot(config.BOT_TOKEN);
@@ -18,7 +19,8 @@ kuro.command("start", async (ctx) => {
     ctx.chat.id,
     `**Here are the things i can do**:` +
       `Fetch Stats : Say 'Fetch my Kora Node Stats' or type **/stats**` +
-      `Create Zombie Account : Say 'Create a Zombie Account' or type **/zombie**`,
+      `Create Zombie Account : Say 'Create a Zombie Account' or type **/zombie**` +
+      `Reclaim all your SOL upon command : Say 'Reclaim all SOL' or type **/reclaim**`,
     {
       parse_mode: "MarkdownV2",
     },
@@ -27,9 +29,8 @@ kuro.command("start", async (ctx) => {
 
 kuro.command("stats", async (ctx) => {
   const accounts_reclaimed = await fetchSponsoredAccountsNumber();
-  
-  
 });
+
 kuro.command("help", async (ctx) => {
   await ctx.reply("Here are all my available commands 💨");
   await ctx.reply(
@@ -47,13 +48,20 @@ kuro.command("help", async (ctx) => {
 
 kuro.hears("Create a Zombie Account", async (ctx) => {
   await ctx.reply("Creating a Zombie Account.....");
-  const account_data = await createSystemAccount();
-  if (!account_data.success) {
-    await ctx.reply(`Failed to Create Zombie ${account_data.error} `);
+
+  const zombie = await handleZombie();
+
+  if (zombie.error) {
+    await ctx.reply(`Failed to Create Zombie Account : ${zombie.error} `);
+  }
+
+  if (zombie === null || zombie.account === null) {
+    await ctx.reply(`Failed to Create Zombie Account`);
+    return;
   }
   await kuro.api.sendMessage(
     ctx.chatId,
-    `<b>Created Zombie Account</b>\n\n<b>Account Details Below</b>\n\n<b>Account Pubkey :</b> <code>${account_data.accountPubkey.toString()}</code>\n\n<b>Explorer URL :</b> <a href="${account_data.explorerURL}">${account_data.explorerURL}</a>\n\n<b>Network :</b> Devnet`,
+    `<b>Created Zombie Account</b>\n\n<b>Account Details Below</b>\n\n<b>Account Pubkey :</b> <code>${zombie?.account.accountPubkey.toString()}</code>\n\n<b>Explorer URL :</b> <a href="${zombie?.account.explorerURL}">${zombie?.account.explorerURL}</a>\n\n<b>Network :</b> Devnet`,
     { parse_mode: "HTML" },
   );
   await ctx.reply(`Private Key Has Been Persisted in Supabase`);
@@ -71,7 +79,7 @@ kuro.command("zombie", async (ctx) => {
     `<b>Created Zombie Account</b>\n\n<b>Account Details Below</b>\n\n<b>Account Pubkey :</b> <code>${account_data.accountPubkey.toString()}</code>\n\n<b>Explorer URL :</b> <a href="${account_data.explorerURL}">${account_data.explorerURL}</a>\n\n<b>Network :</b> Devnet`,
     { parse_mode: "HTML" },
   );
-  await ctx.reply(`Private Key Has Been Persisted in Supabase`);
+  await ctx.reply(`Private Key Has Been Persisted`);
   await ctx.reply("Zombie Account has been created Successfully");
 });
 

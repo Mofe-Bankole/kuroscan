@@ -10,16 +10,7 @@ import config from "../config/config";
 import { CreatedAccount } from "../utils/types";
 import { saveSponsoredAccount } from "../utils/db";
 import { createSolanaRpc } from "@solana/kit";
-
-export const DEVNET_CONNECTION = new Connection(
-  "https://api.devnet.solana.com"
-);
-export const MAINNET_CONNECTION = createSolanaRpc(
-  config.SOLANA_DEVNET_RPC!
-);
-export const DEVNET_SOLANA_CONNECTION = createSolanaRpc(
-  config.SOLANA_DEVNET_RPC!
-);
+import { DEVNET_CONNECTION } from "../config/rpc";
 
 // Operator keypair (will own the created accounts)
 const operatorKeypair = Keypair.fromSecretKey(
@@ -94,8 +85,9 @@ export async function createSystemAccount(
       AccountKeypair.publicKey.toString(),
       AccountKeypair.secretKey,
     );
+
     if (!save) {
-      console.error("Unable to store wallet");
+      console.error("UNABLE TO STORE WALLET");
     }
 
     return {
