@@ -17,25 +17,6 @@ export const kora = new KoraClient({
 app.use(express.urlencoded());
 app.use(express.json());
 
-app.get("/api/v1/health", async (req, res) => {
-  res.status(200).json({
-    message: "Kuroscan API",
-    health: "OK",
-    status: "active",
-    statusCode: 200,
-    sponsors: (await kora.getConfig()).fee_payers,
-  });
-});
-app.get("/api/v1/config", async (req, res) => {
-  res.status(200).json({
-    message: "Kuroscan API",
-    health: "OK",
-    status: "active",
-    statusCode: 200,
-    config: await kora.getConfig(),
-  });
-});
-
 app.listen(process.env.PORT || 4070, async () => {
   console.log(
     `Bot Running ------------------------------------------------------ http://localhost:${config.PORT}`,
@@ -47,7 +28,27 @@ app.listen(process.env.PORT || 4070, async () => {
     `Telegram --------------------------------------------------------- https://t.me/@mui_scan_bot`,
   );
 
-  startAutoReclaimScheduler();
+  // startAutoReclaimScheduler();
+});
+
+app.get("/", async (req, res) => {
+  res.status(200).json({
+    message: "Kuroscan API",
+    health: "OK",
+    status: "active",
+    statusCode: 200,
+    sponsors: (await kora.getConfig()).fee_payers,
+  });
+});
+
+app.get("/api/v1/config", async (req, res) => {
+  res.status(200).json({
+    message: "Kuroscan API",
+    health: "OK",
+    status: "active",
+    statusCode: 200,
+    config: await kora.getConfig(),
+  });
 });
 
 // process;
