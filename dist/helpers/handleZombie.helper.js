@@ -7,14 +7,15 @@ async function handleZombie() {
     try {
         const account_data = await (0, createAccount_1.createSystemAccount)();
         if (!account_data.success) {
-            errorMessage = "Failed to Create Zombie Account";
+            errorMessage =
+                account_data.error ?? "Failed to create zombie account";
             return {
                 error: errorMessage,
                 account: null,
             };
         }
         return {
-            error: errorMessage,
+            error: null,
             account: account_data,
         };
     }

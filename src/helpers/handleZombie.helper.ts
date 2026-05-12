@@ -12,7 +12,8 @@ export async function handleZombie(): Promise<ZombieAccount> {
     const account_data = await createSystemAccount();
 
     if (!account_data.success) {
-      errorMessage = "Failed to Create Zombie Account";
+      errorMessage =
+        account_data.error ?? "Failed to create zombie account";
       return {
         error: errorMessage,
         account: null,
@@ -20,7 +21,7 @@ export async function handleZombie(): Promise<ZombieAccount> {
     }
 
     return {
-      error: errorMessage,
+      error: null,
       account: account_data,
     };
   } catch (err: any) {

@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "nodemon": "nodemon src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "prestart": "npm run build",
+    "start": "node dist/server.js",
+    "dev": "npm run build && node dist/server.js"
   },
   "keywords": [
     "web3",
@@ -15,7 +17,7 @@
     "nodejs",
     "express",
     "solana",
-    "colleseum",
+    "colosseum",
     "superteam",
     "frontier"
   ],

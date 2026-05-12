@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getReclaimableAccount = getReclaimableAccount;
 const solana_1 = require("../utils/solana");
+const rpc_1 = require("../config/rpc");
 async function getReclaimableAccount(pubKey) {
     try {
         const accountInfo = await (0, solana_1.getAccountInfo)(pubKey);
-        /**Exits if theres no account info */
         if (!accountInfo) {
             return {
                 publicKey: pubKey,
@@ -19,7 +19,6 @@ async function getReclaimableAccount(pubKey) {
             };
         }
         const lamports = BigInt(accountInfo.lamports ?? 0);
-        /**Checks if the account is an executable and in this case cannot be reclaimed */
         if (accountInfo.executable) {
             return {
                 publicKey: pubKey,
@@ -32,7 +31,6 @@ async function getReclaimableAccount(pubKey) {
                 isSystemAccount: false,
             };
         }
-        /**If account is not from token_2022 it cannot be reclaimed */
         if (!accountInfo.isSystemAccount) {
             return {
                 publicKey: pubKey,
@@ -45,28 +43,41 @@ async function getReclaimableAccount(pubKey) {
                 isSystemAccount: false,
             };
         }
-        // ❌ Empty account
-        // Can be Reclaimed
         if (lamports === 0n) {
             return {
                 publicKey: pubKey,
-                reclaimable: true,
-                status: "active",
-                reason: "Account Empty",
+                reclaimable: false,
+                status: "closed",
+                reason: "Account has no lamports",
                 lamports,
                 rentExemptMinimum: null,
                 reclaimableLamports: 0n,
                 isSystemAccount: true,
             };
         }
+        const space = Number.parseInt(accountInfo.space ?? "0", 10);
+        const rentExemptMin = BigInt(await rpc_1.DEVNET_CONNECTION.getMinimumBalanceForRentExemption(Number.isFinite(space) ? space : 0));
+        if (lamports <= rentExemptMin) {
+            return {
+                publicKey: pubKey,
+                reclaimable: false,
+                status: "active",
+                reason: "At or below rent-exempt minimum (nothing safe to sweep)",
+                lamports,
+                rentExemptMinimum: rentExemptMin,
+                reclaimableLamports: 0n,
+                isSystemAccount: true,
+            };
+        }
+        const excess = lamports - rentExemptMin;
         return {
             publicKey: pubKey,
             reclaimable: true,
             status: "active",
-            reason: "Owned Account With Balance",
+            reason: "Excess lamports above rent-exempt minimum",
             lamports,
-            rentExemptMinimum: null,
-            reclaimableLamports: lamports,
+            rentExemptMinimum: rentExemptMin,
+            reclaimableLamports: excess,
             isSystemAccount: true,
         };
     }

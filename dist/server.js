@@ -43,37 +43,66 @@ const express_1 = __importDefault(require("express"));
 require("./bot/telegram");
 const config_1 = __importDefault(require("./config/config"));
 const telegram_1 = require("./bot/telegram");
-const kora_1 = require("@solana/kora");
+const koraClient_1 = require("./lib/koraClient");
+Object.defineProperty(exports, "kora", { enumerable: true, get: function () { return koraClient_1.kora; } });
 const autoReclaim_1 = require("./cron/autoReclaim");
 const app = (0, express_1.default)();
+if (!config_1.default.BOT_TOKEN) {
+    console.error("Missing BOT_TOKEN — set it in your environment or .env file.");
+    process.exit(1);
+}
 telegram_1.kuro.start();
-exports.kora = new kora_1.KoraClient({
-    rpcUrl: config_1.default.KORA_RPC_URL,
-});
 app.use(express_1.default.urlencoded());
 app.use(express_1.default.json());
-app.get("/api/v1/health", async (req, res) => {
-    res.status(200).json({
-        message: "Kuroscan API",
-        health: "OK",
-        status: "active",
-        statusCode: 200,
-        sponsors: (await exports.kora.getConfig()).fee_payers,
-    });
-});
-app.get("/api/v1/config", async (req, res) => {
-    res.status(200).json({
-        message: "Kuroscan API",
-        health: "OK",
-        status: "active",
-        statusCode: 200,
-        config: await exports.kora.getConfig(),
-    });
-});
-app.listen(process.env.PORT || 4070, async () => {
-    console.log(`Bot Running ------------------------------------------------------ http://localhost:${config_1.default.PORT}`);
+const port = Number(process.env.PORT ?? config_1.default.PORT ?? 4070);
+app.listen(port, async () => {
+    console.log(`Bot Running ------------------------------------------------------ http://localhost:${port}`);
     console.log(`Kora Node -------------------------------------------------------- ${config_1.default.KORA_RPC_URL}`);
     console.log(`Telegram --------------------------------------------------------- https://t.me/@mui_scan_bot`);
-    (0, autoReclaim_1.startAutoReclaimScheduler)();
+    if (process.env.ENABLE_AUTO_RECLAIM === "true") {
+        (0, autoReclaim_1.startAutoReclaimScheduler)();
+        console.log("Auto-reclaim scheduler enabled (ENABLE_AUTO_RECLAIM=true).");
+    }
+});
+app.get("/", async (req, res) => {
+    try {
+        const koraConfig = await koraClient_1.kora.getConfig();
+        res.status(200).json({
+            message: "Kuroscan API",
+            health: "OK",
+            status: "active",
+            statusCode: 200,
+            sponsors: koraConfig.fee_payers,
+        });
+    }
+    catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        res.status(503).json({
+            message: "Kuroscan API",
+            health: "degraded",
+            status: "kora_unreachable",
+            detail: msg,
+        });
+    }
+});
+app.get("/api/v1/config", async (req, res) => {
+    try {
+        res.status(200).json({
+            message: "Kuroscan API",
+            health: "OK",
+            status: "active",
+            statusCode: 200,
+            config: await koraClient_1.kora.getConfig(),
+        });
+    }
+    catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        res.status(503).json({
+            message: "Kuroscan API",
+            health: "degraded",
+            status: "kora_unreachable",
+            detail: msg,
+        });
+    }
 });
 // process;

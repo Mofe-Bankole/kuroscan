@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import bs58 from "bs58";
+import config from "../config/config";
 
 export type SponsoredAccount = {
   public_key: string;
@@ -67,11 +68,16 @@ export async function fetchOperatorSponsoredAccounts() {}
 export async function saveSponsoredAccount(
   public_key: string,
   secret_key: Uint8Array,
+  sponsor_pubkey?: string,
 ) {
+  const sponsor =
+    sponsor_pubkey ?? config.SPONSOR_PUBKEY ?? null;
+
   const { error } = await supabase.from("sponsored_accounts").insert({
-    public_key: public_key,
+    public_key,
     secret_key: bs58.encode(secret_key),
     status: "active",
+    sponsor_pubkey: sponsor,
   });
 
   return !error;

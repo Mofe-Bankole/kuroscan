@@ -50,8 +50,8 @@ async function createSystemAccount(initialBalanceSOL = 0.1) {
         }, "confirmed");
         // Store the account in database
         // In production hash the accounts private key
-        const save = (0, db_1.saveSponsoredAccount)(AccountKeypair.publicKey.toString(), AccountKeypair.secretKey);
-        if (!save) {
+        const saved = await (0, db_1.saveSponsoredAccount)(AccountKeypair.publicKey.toString(), AccountKeypair.secretKey, exports.operatorPubkey.toBase58());
+        if (!saved) {
             console.error("UNABLE TO STORE WALLET");
         }
         return {

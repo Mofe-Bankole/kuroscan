@@ -16,6 +16,7 @@ exports.storeUser = storeUser;
 exports.fetchSponsoredAccountsNumber = fetchSponsoredAccountsNumber;
 const supabase_1 = require("../lib/supabase");
 const bs58_1 = __importDefault(require("bs58"));
+const config_1 = __importDefault(require("../config/config"));
 async function getSponsoredAccounts() {
     // Fetch sponsor and account public keys from the "sponsored_accounts" table
     const { data, error } = await supabase_1.supabase
@@ -52,11 +53,13 @@ async function fetchSponsor() {
     return data;
 }
 async function fetchOperatorSponsoredAccounts() { }
-async function saveSponsoredAccount(public_key, secret_key) {
+async function saveSponsoredAccount(public_key, secret_key, sponsor_pubkey) {
+    const sponsor = sponsor_pubkey ?? config_1.default.SPONSOR_PUBKEY ?? null;
     const { error } = await supabase_1.supabase.from("sponsored_accounts").insert({
-        public_key: public_key,
+        public_key,
         secret_key: bs58_1.default.encode(secret_key),
         status: "active",
+        sponsor_pubkey: sponsor,
     });
     return !error;
 }

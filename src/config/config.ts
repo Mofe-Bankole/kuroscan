@@ -12,7 +12,7 @@ const SOLANA_DEVNET_RPC = process.env.SOLANA_DEVNET_RPC;
 
 const KORA_DEVNET_API = process.env.KORA_DEVNET_API;
 
-const SOLANA_MAINNET_RPC = process.env.SOLANA_MAINNET_RPC!;
+const SOLANA_MAINNET_RPC = process.env.SOLANA_MAINNET_RPC;
 
 const NODE_PUBLIC_SUPABASE_URL = process.env.NODE_PUBLIC_SUPABASE_URL as string;
 

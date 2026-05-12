@@ -5,125 +5,254 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.kuro = void 0;
 const grammy_1 = require("grammy");
-const createAccount_1 = require("../services/createAccount");
 const config_1 = __importDefault(require("../config/config"));
 const fetchAccount_1 = require("../services/fetchAccount");
 const reclaimService_1 = require("../services/reclaimService");
+const koraClient_1 = require("../lib/koraClient");
 const db_1 = require("../utils/db");
 const handleZombie_helper_1 = require("../helpers/handleZombie.helper");
-// Bot initializer
+const getReclaimables_1 = require("../services/getReclaimables");
 exports.kuro = new grammy_1.Bot(config_1.default.BOT_TOKEN);
-exports.kuro.command("start", async (ctx) => {
-    await ctx.reply("Hey I'm Tokito 👋 a bot dedicated to scanning the Kora node for dormant SOL 💰accounts\n\nMy name's based on the Mist Hashira  Muichiro Tokito since I'm pretty fast and reliable 🙂\n\nChat me up to get started");
-    await exports.kuro.api.sendMessage(ctx.chat.id, `**Here are the things i can do**:` +
-        `Fetch Stats : Say 'Fetch my Kora Node Stats' or type **/stats**` +
-        `Create Zombie Account : Say 'Create a Zombie Account' or type **/zombie**` +
-        `Reclaim all your SOL upon command : Say 'Reclaim all SOL' or type **/reclaim**`, {
-        parse_mode: "MarkdownV2",
-    });
-});
-exports.kuro.command("stats", async (ctx) => {
-    const accounts_reclaimed = await (0, db_1.fetchSponsoredAccountsNumber)();
-});
-exports.kuro.command("help", async (ctx) => {
-    await ctx.reply("Here are all my available commands 💨");
-    await ctx.reply(`/about - Tells you about Tokito\n` +
-        `/add - Add a new sponsored account to track\n` +
-        `/stats - Status of your sponsor / Kora Node\n` +
-        `/list - List all sponsored accounts\n` +
-        `/verify - Verify if an account is reclaimable\n` +
-        `/fetch - Fetch an accounts info\n` +
-        `/zombie - Create a Zombie Account`);
-});
-/**Create A Zombie account */
-exports.kuro.hears("Create a Zombie Account", async (ctx) => {
-    await ctx.reply("Creating a Zombie Account.....");
-    const zombie = await (0, handleZombie_helper_1.handleZombie)();
-    if (zombie.error) {
-        await ctx.reply(`Failed to Create Zombie Account : ${zombie.error} `);
-    }
-    if (zombie === null || zombie.account === null) {
-        await ctx.reply(`Failed to Create Zombie Account`);
+function lamportsToSol(lamports) {
+    if (lamports === undefined)
+        return "0";
+    const v = typeof lamports === "bigint" ? lamports : BigInt(String(lamports));
+    return (Number(v) / 1e9).toFixed(6);
+}
+function parseZombieBatchCount(text) {
+    const parts = text.trim().split(/\s+/);
+    const nRaw = parts[1];
+    if (nRaw === undefined)
+        return 1;
+    const parsed = Number.parseInt(nRaw, 10);
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 10)
+        return null;
+    return parsed;
+}
+async function runZombieBatch(ctx, count) {
+    const chatId = ctx.chat?.id;
+    if (chatId === undefined) {
+        await ctx.reply("Could not resolve chat id for this update.");
         return;
     }
-    await exports.kuro.api.sendMessage(ctx.chatId, `<b>Created Zombie Account</b>\n\n<b>Account Details Below</b>\n\n<b>Account Pubkey :</b> <code>${zombie?.account.accountPubkey.toString()}</code>\n\n<b>Explorer URL :</b> <a href="${zombie?.account.explorerURL}">${zombie?.account.explorerURL}</a>\n\n<b>Network :</b> Devnet`, { parse_mode: "HTML" });
-    await ctx.reply(`Private Key Has Been Persisted in Supabase`);
-    await ctx.reply("Zombie Account has been created Successfully");
+    await ctx.reply(`Creating ${count} zombie account(s) on devnet…`);
+    for (let i = 0; i < count; i++) {
+        const zombie = await (0, handleZombie_helper_1.handleZombie)();
+        if (zombie.error || !zombie.account) {
+            await ctx.reply(`Failed (batch ${i + 1}/${count}): ${zombie.error ?? "unknown error"}`);
+            return;
+        }
+        const acc = zombie.account;
+        await exports.kuro.api.sendMessage(chatId, `<b>Created zombie account</b> (${i + 1}/${count})\n\n` +
+            `<b>Pubkey</b>\n<code>${acc.accountPubkey}</code>\n\n` +
+            `<b>Explorer</b>\n<a href="${acc.explorerURL}">${acc.explorerURL}</a>\n\n` +
+            `<b>Network</b>: devnet\n` +
+            `<b>Tx</b>\n<code>${acc.signature}</code>`, { parse_mode: "HTML" });
+    }
+    await ctx.reply("Done. Secret keys are stored in Supabase for this bot instance — treat that database as highly sensitive.");
+}
+exports.kuro.command("start", async (ctx) => {
+    await ctx.reply("Hey, I'm Tokito — a Telegram operator for Kuroscan.\n\n" +
+        "I help you spin up sponsored-style system accounts on Solana devnet and sweep **excess SOL** back to your sponsor safely (without draining rent-exempt minimums).\n\n" +
+        "Type /help for commands.", { parse_mode: "Markdown" });
+});
+exports.kuro.command("stats", async (ctx) => {
+    try {
+        const rows = (await (0, db_1.fetchSponsoredAccountsNumber)()) ?? [];
+        const reclaimed = rows.filter((r) => r.status === "reclaimed").length;
+        const active = rows.filter((r) => r.status === "active").length;
+        const sponsors = (await koraClient_1.kora.getConfig()).fee_payers;
+        const date = new Date().toUTCString();
+        await exports.kuro.api.sendMessage(ctx.chat.id, `<b>Kuroscan stats</b> <i>${date}</i>\n\n` +
+            `Tracked in DB: <b>${rows.length}</b>\n` +
+            `Active: <b>${active}</b>\n` +
+            `Marked reclaimed: <b>${reclaimed}</b>\n\n` +
+            `<b>Kora fee payers</b>\n<pre>${JSON.stringify(sponsors, null, 2)}</pre>`, { parse_mode: "HTML" });
+    }
+    catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await ctx.reply(`Stats unavailable: ${msg}`);
+    }
+});
+exports.kuro.command("help", async (ctx) => {
+    await ctx.reply(`/about — what Kuroscan is (hackathon blurb)\n` +
+        `/stats — DB + Kora node snapshot\n` +
+        `/list — public keys tracked for this bot (max 25)\n` +
+        `/verify &lt;pubkey&gt; — reclaim pre-check (rent-aware)\n` +
+        `/fetch &lt;pubkey&gt; — quick on-chain read\n` +
+        `/create — same as /zombie (README compatibility)\n` +
+        `/zombie — create one devnet system account\n` +
+        `/zombie 3 — create up to 10 accounts in one go\n` +
+        `/reclaim — sweep reclaimable excess to sponsor\n\n` +
+        `Phrases: “Create a Zombie Account”, “Reclaim all owed rent”.`, { parse_mode: "HTML" });
+});
+exports.kuro.command("about", async (ctx) => {
+    await ctx.reply("<b>Kuroscan</b> is a devnet workflow bot: provision empty system accounts, persist their keys in your Supabase, and reclaim <i>only lamports above rent-exempt minimum</i> so accounts are not accidentally bricked.\n\n" +
+        "Stack: Grammy + Express health API + <code>@solana/kora</code> for sponsor visibility + Supabase for bookkeeping.\n\n" +
+        "Built for Solana Colosseum — automate the boring part of sponsored account hygiene.", { parse_mode: "HTML" });
+});
+exports.kuro.command("list", async (ctx) => {
+    try {
+        const rows = (await (0, db_1.getSponsoredAccounts)()) ?? [];
+        if (!rows.length) {
+            await ctx.reply("No sponsored accounts in the database yet.");
+            return;
+        }
+        const slice = rows.slice(0, 25);
+        const lines = slice.map((r) => `• <code>${r.public_key}</code> — ${r.status}`);
+        const more = rows.length > slice.length
+            ? `\n\n… and <b>${rows.length - slice.length}</b> more not shown.`
+            : "";
+        await exports.kuro.api.sendMessage(ctx.chat.id, `<b>Tracked accounts (${rows.length})</b>\n\n${lines.join("\n")}${more}`, { parse_mode: "HTML" });
+    }
+    catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await ctx.reply(`Could not list accounts: ${msg}`);
+    }
+});
+exports.kuro.command("verify", async (ctx) => {
+    const parts = ctx.msg.text.trim().split(/\s+/);
+    const pubkey = parts[1];
+    if (!pubkey) {
+        await ctx.reply("Usage: /verify <public_key>");
+        return;
+    }
+    try {
+        const info = await (0, getReclaimables_1.getReclaimableAccount)(pubkey);
+        const rent = info.rentExemptMinimum !== null && info.rentExemptMinimum !== undefined
+            ? `${info.rentExemptMinimum} lamports`
+            : "n/a";
+        const lam = info.lamports !== null && info.lamports !== undefined
+            ? `${info.lamports} lamports (~${lamportsToSol(info.lamports)} SOL)`
+            : "n/a";
+        await exports.kuro.api.sendMessage(ctx.chat.id, `<b>Verify</b> <code>${pubkey}</code>\n\n` +
+            `<b>Reclaimable:</b> ${info.reclaimable ? "yes" : "no"}\n` +
+            `<b>Reason:</b> ${info.reason}\n` +
+            `<b>System account:</b> ${info.isSystemAccount}\n` +
+            `<b>Balance:</b> ${lam}\n` +
+            `<b>Rent-exempt min:</b> ${rent}\n` +
+            `<b>Reclaimable lamports (excess):</b> ${info.reclaimableLamports}`, { parse_mode: "HTML" });
+    }
+    catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await ctx.reply(`Verify failed: ${msg}`);
+    }
+});
+exports.kuro.command("create", async (ctx) => {
+    const count = parseZombieBatchCount(ctx.msg.text ?? "");
+    if (count === null) {
+        await ctx.reply("Usage: /create — one account\n/create <n> — n accounts (1–10). Same behavior as /zombie.");
+        return;
+    }
+    await runZombieBatch(ctx, count);
 });
 exports.kuro.command("zombie", async (ctx) => {
-    await ctx.reply("Creating a Zombie Account.....");
-    const account_data = await (0, createAccount_1.createSystemAccount)();
-    if (!account_data.success) {
-        await ctx.reply(`Failed to Create Zombie ${account_data.error} `);
+    const count = parseZombieBatchCount(ctx.msg.text ?? "");
+    if (count === null) {
+        await ctx.reply("Usage: /zombie — create one account\n/zombie <n> — create n accounts (1–10)");
+        return;
     }
-    await exports.kuro.api.sendMessage(ctx.chatId, `<b>Created Zombie Account</b>\n\n<b>Account Details Below</b>\n\n<b>Account Pubkey :</b> <code>${account_data.accountPubkey.toString()}</code>\n\n<b>Explorer URL :</b> <a href="${account_data.explorerURL}">${account_data.explorerURL}</a>\n\n<b>Network :</b> Devnet`, { parse_mode: "HTML" });
-    await ctx.reply(`Private Key Has Been Persisted`);
-    await ctx.reply("Zombie Account has been created Successfully");
+    await runZombieBatch(ctx, count);
+});
+exports.kuro.hears("Create a Zombie Account", async (ctx) => {
+    await ctx.reply("Creating a zombie account on devnet…");
+    const zombie = await (0, handleZombie_helper_1.handleZombie)();
+    if (zombie.error || !zombie.account) {
+        await ctx.reply(`Failed to create zombie account: ${zombie.error ?? "unknown error"}`);
+        return;
+    }
+    const acc = zombie.account;
+    const chatId = ctx.chat?.id;
+    if (chatId === undefined) {
+        await ctx.reply("Could not resolve chat id for this update.");
+        return;
+    }
+    await exports.kuro.api.sendMessage(chatId, `<b>Created zombie account</b>\n\n` +
+        `<b>Pubkey</b>\n<code>${acc.accountPubkey}</code>\n\n` +
+        `<b>Explorer</b>\n<a href="${acc.explorerURL}">${acc.explorerURL}</a>\n\n` +
+        `<b>Network</b>: devnet`, { parse_mode: "HTML" });
+    await ctx.reply("Private key material was written to Supabase for this deployment.");
 });
 exports.kuro.command("fetch", async (ctx) => {
-    const msg = ctx.msg.text;
-    // Get the second argument (word) supplied via text
-    const parts = msg.split(" ");
+    const parts = ctx.msg.text.trim().split(/\s+/);
     const walletaddr = parts[1];
+    if (!walletaddr) {
+        await ctx.reply("Usage: /fetch <public_key>");
+        return;
+    }
     const accountINFO = await (0, fetchAccount_1.fetchWalletInfo)(walletaddr);
-    await exports.kuro.api.sendMessage(ctx.chat.id, `<b>Account Info</b>\n\nPublicKey : <code>${walletaddr}</code>\n\nBalance : <b>${accountINFO?.balance / 1000000000n} SOL</b>`, { parse_mode: "HTML" });
+    if (!accountINFO) {
+        await ctx.reply("Invalid public key or account not found.");
+        return;
+    }
+    await exports.kuro.api.sendMessage(ctx.chat.id, `<b>Account</b>\n` +
+        `Public key: <code>${walletaddr}</code>\n` +
+        `Balance: <b>${lamportsToSol(accountINFO.balance)} SOL</b>\n` +
+        `Owner: <code>${String(accountINFO.owner ?? "")}</code>\n` +
+        `Executable: <b>${accountINFO.executable ? "yes" : "no"}</b>\n` +
+        `<a href="${accountINFO.explorerUrl}">Solscan</a>`, { parse_mode: "HTML" });
 });
 exports.kuro.command("reclaim", async (ctx) => {
-    await ctx.reply("Fetching your sponsored accounts and reclaimable balances...");
+    await ctx.reply("Fetching sponsored accounts and reclaimable balances (rent-aware)…");
     try {
         const summary = await (0, reclaimService_1.reclaimSponsoredAccounts)();
         if (summary.reclaimed.length === 0 && summary.skipped.length === 0) {
-            await ctx.reply("No sponsored accounts were found.");
+            await ctx.reply("No sponsored accounts were found in the database.");
             return;
         }
         const lines = [
-            `<b>Reclaim Summary</b>`,
+            `<b>Reclaim summary</b>`,
             ``,
-            `<b>Reclaimed Accounts:</b> ${summary.reclaimed.length}`,
-            `<b>Total Reclaimed:</b> ${summary.totalSol} SOL`,
+            `<b>Reclaimed:</b> ${summary.reclaimed.length}`,
+            `<b>Total moved:</b> ${summary.totalSol.toFixed(6)} SOL`,
         ];
         if (summary.reclaimed.length > 0) {
-            lines.push("", ...summary.reclaimed.map((item) => `• <code>${item.account}</code>\nTo: <code>${item.destination}</code>\nSignature: <code>${item.signature}</code>`));
+            lines.push("", ...summary.reclaimed.map((item) => `• <code>${item.account}</code>\nTo: <code>${item.destination}</code>\nSig: <code>${item.signature}</code>`));
         }
         if (summary.skipped.length > 0) {
-            lines.push("", `<b>Skipped / Failed:</b> ${summary.skipped.length}`, ...summary.skipped.map((item) => `• <code>${item.account}</code> - ${item.reason ?? "Skipped"}`));
+            lines.push("", `<b>Skipped / failed:</b> ${summary.skipped.length}`, ...summary.skipped.map((item) => `• <code>${item.account}</code> — ${item.reason ?? "skipped"}`));
         }
         await exports.kuro.api.sendMessage(ctx.chat.id, lines.join("\n"), {
             parse_mode: "HTML",
         });
     }
     catch (error) {
-        await ctx.reply(`Reclaim failed: ${error?.message ?? "Unknown error"}`);
+        const msg = error instanceof Error ? error.message : String(error);
+        await ctx.reply(`Reclaim failed: ${msg}`);
     }
 });
 exports.kuro.hears("Reclaim all owed rent", async (ctx) => {
-    await ctx.reply("Fetching your sponsored accounts and reclaimable balances...");
+    await ctx.reply("Fetching sponsored accounts and reclaimable balances (rent-aware)…");
     try {
         const summary = await (0, reclaimService_1.reclaimSponsoredAccounts)();
         if (summary.reclaimed.length === 0 && summary.skipped.length === 0) {
-            await ctx.reply("No sponsored accounts were found.");
+            await ctx.reply("No sponsored accounts were found in the database.");
             return;
         }
         const lines = [
-            `<b>Reclaim Summary</b>`,
+            `<b>Reclaim summary</b>`,
             ``,
-            `\n<b>Reclaimed Accounts:</b> ${summary.reclaimed.length}`,
-            `\n<b>Total Reclaimed:</b> ${summary.totalSol} SOL`,
+            `<b>Reclaimed:</b> ${summary.reclaimed.length}`,
+            `<b>Total moved:</b> ${summary.totalSol.toFixed(6)} SOL`,
         ];
         if (summary.reclaimed.length > 0) {
-            lines.push("", ...summary.reclaimed.map((item) => `• <code>${item.account}</code>\nTo: <code>${item.destination}</code>\nSignature: <code>${item.signature}</code>`));
+            lines.push("", ...summary.reclaimed.map((item) => `• <code>${item.account}</code>\nTo: <code>${item.destination}</code>\nSig: <code>${item.signature}</code>`));
         }
         if (summary.skipped.length > 0) {
-            lines.push("", `<b>Skipped / Failed:</b> ${summary.skipped.length}`, ...summary.skipped.map((item) => `• <code>${item.account}</code> - ${item.reason ?? "Skipped"}`));
+            lines.push("", `<b>Skipped / failed:</b> ${summary.skipped.length}`, ...summary.skipped.map((item) => `• <code>${item.account}</code> — ${item.reason ?? "skipped"}`));
         }
         await exports.kuro.api.sendMessage(ctx.chat.id, lines.join("\n"), {
             parse_mode: "HTML",
         });
     }
     catch (error) {
-        await ctx.reply(`Reclaim failed: ${error?.message ?? "Unknown error"}`);
+        const msg = error instanceof Error ? error.message : String(error);
+        await ctx.reply(`Reclaim failed: ${msg}`);
     }
 });
 exports.kuro.on("message:text", async (ctx) => {
-    await ctx.reply("Hey im Kuroscan and i help devs reclaim SOL");
+    const text = ctx.message.text;
+    if (text.startsWith("/"))
+        return;
+    await ctx.reply("I did not understand that. Try /help — or say “Create a Zombie Account” / “Reclaim all owed rent”.");
 });

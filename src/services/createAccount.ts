@@ -9,7 +9,6 @@ import {
 import config from "../config/config";
 import { CreatedAccount } from "../utils/types";
 import { saveSponsoredAccount } from "../utils/db";
-import { createSolanaRpc } from "@solana/kit";
 import { DEVNET_CONNECTION } from "../config/rpc";
 
 // Operator keypair (will own the created accounts)
@@ -81,12 +80,13 @@ export async function createSystemAccount(
 
     // Store the account in database
     // In production hash the accounts private key
-    const save = saveSponsoredAccount(
+    const saved = await saveSponsoredAccount(
       AccountKeypair.publicKey.toString(),
       AccountKeypair.secretKey,
+      operatorPubkey.toBase58(),
     );
 
-    if (!save) {
+    if (!saved) {
       console.error("UNABLE TO STORE WALLET");
     }
 

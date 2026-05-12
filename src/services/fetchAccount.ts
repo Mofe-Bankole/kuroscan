@@ -1,10 +1,18 @@
 import { address } from "@solana/kit";
+import { PublicKey } from "@solana/web3.js";
 import { DEVNET_SOLANA_CONNECTION } from "../config/rpc";
-// import { DEVNET_SOLANA_CONNECTION } from "./createAccount";
 
 export async function fetchWalletInfo(pubkey: string) {
-  if (!pubkey) return;
-  const wallet = address(pubkey);
+  if (!pubkey?.trim()) return null;
+
+  try {
+    // Validate base58 before hitting RPC
+    new PublicKey(pubkey.trim());
+  } catch {
+    return null;
+  }
+
+  const wallet = address(pubkey.trim());
 
   const account = await DEVNET_SOLANA_CONNECTION.getAccountInfo(wallet).send();
 

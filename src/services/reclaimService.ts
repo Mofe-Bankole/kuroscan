@@ -97,6 +97,17 @@ async function reclaimSingleAccount(
   }
 
   const lamportsToSend = reclaimInfo.reclaimableLamports - estimatedFee;
+
+  if (lamportsToSend > BigInt(Number.MAX_SAFE_INTEGER)) {
+    return {
+      account: account.public_key,
+      destination: account.sponsor_pubkey,
+      success: false,
+      lamports: reclaimInfo.reclaimableLamports,
+      reason: "Reclaim amount too large for this transfer path",
+    };
+  }
+
   const transaction = new Transaction({
     feePayer: signer.publicKey,
     recentBlockhash: latestBlockhash.blockhash,
